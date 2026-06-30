@@ -3,13 +3,13 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Image, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, SearchBar, Avatar, PgSelector } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
-import { useManagers } from '../../../src/hooks/queries';
+import { useManagers, useDeleteManager } from '../../../src/hooks/queries';
 
 const DEPARTMENTS = ['All workers', 'Management', 'Kitchen'];
 const DEPT_ICONS: Record<string, any> = {
@@ -29,6 +29,7 @@ export default function StaffScreen() {
   const [search, setSearch] = useState('');
 
   const { data: managers, isLoading, refetch: refetchManagers } = useManagers(user?.id);
+  const deleteManager = useDeleteManager();
 
   useFocusEffect(
     useCallback(() => {
@@ -154,10 +155,62 @@ export default function StaffScreen() {
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.success, marginRight: 4 }} />
-                    <Typography variant="caption" color={theme.colors.success}>Active</Typography>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: member.active ? theme.colors.success : theme.colors.textMuted, marginRight: 4 }} />
+                    <Typography variant="caption" color={member.active ? theme.colors.success : theme.colors.textMuted}>{member.active ? 'Active' : 'Inactive'}</Typography>
                   </View>
-                  <TouchableOpacity activeOpacity={0.8}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm }}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => router.push({ pathname: '/screens/edit-manager' as any, params: { id: member.id } })}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: theme.colors.successSurface,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: theme.spacing.sm,
+                      }}
+                    >
+                      <Ionicons name="create-outline" size={16} color={theme.colors.success} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        Alert.alert(
+                          'Delete Staff',
+                          `Are you sure you want to remove ${member.name}?`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: () => member.id && deleteManager.mutate(member.id),
+                            },
+                          ]
+                        );
+                      }}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: theme.colors.dangerSurface,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={async () => {
+                      if (!member.mobile) return;
+                      const url = `tel:${member.mobile}`;
+                      const supported = await Linking.canOpenURL(url);
+                      if (supported) await Linking.openURL(url);
+                    }}
+                  >
                     <Ionicons name="call" size={22} color={theme.colors.primary} />
                   </TouchableOpacity>
                 </View>

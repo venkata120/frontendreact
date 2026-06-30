@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, TouchableOpacity, Modal, FlatList } from 'react-native';
+import { View, TouchableOpacity, Modal, FlatList, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography } from '../Typography/Typography';
 import { useTheme } from '../../hooks/useTheme';
@@ -28,7 +28,13 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
   const isLoading = isManager ? managerQuery.isLoading : ownerQuery.isLoading;
 
   useEffect(() => {
-    if (properties && properties.length > 0 && !selectedPg?.name) {
+    if (!properties || properties.length === 0) return;
+    const match = selectedPg?.id ? properties.find((p) => p.id === selectedPg.id) : undefined;
+    if (match) {
+      if (!selectedPg || selectedPg.id !== match.id || selectedPg.name !== match.name) {
+        setSelectedPg(match);
+      }
+    } else if (!selectedPg) {
       setSelectedPg(properties[0]);
     }
   }, [properties, selectedPg, setSelectedPg]);
@@ -82,16 +88,20 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <View
-            style={{
-              backgroundColor: theme.colors.background,
-              borderTopLeftRadius: theme.radius.xl,
-              borderTopRightRadius: theme.radius.xl,
-              padding: theme.spacing.lg,
-              maxHeight: '70%',
-            }}
-          >
+        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <TouchableWithoutFeedback>
+              <View
+                style={{
+                  backgroundColor: theme.colors.background,
+                  borderTopLeftRadius: theme.radius.xl,
+                  borderTopRightRadius: theme.radius.xl,
+                  padding: theme.spacing.lg,
+                  paddingBottom: theme.spacing.xl,
+                  maxHeight: '80%',
+                  minHeight: 220,
+                }}
+              >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
               <Typography variant="title3" color={theme.colors.text} style={{ fontWeight: '600' }}>
                 Select Property
@@ -131,8 +141,10 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
                 </TouchableOpacity>
               )}
             />
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </>
   );

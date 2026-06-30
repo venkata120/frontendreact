@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Avatar, PgSelector } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
@@ -276,7 +276,16 @@ export default function RoomsScreen() {
                           </TouchableOpacity>
                           <TouchableOpacity
                             activeOpacity={0.8}
-                            onPress={() => deleteRoom.mutate(room.id)}
+                            onPress={() => {
+                              Alert.alert(
+                                'Delete Room',
+                                'Are you sure you want to delete this room?',
+                                [
+                                  { text: 'Cancel', style: 'cancel' },
+                                  { text: 'Delete', style: 'destructive', onPress: () => deleteRoom.mutate(room.id) },
+                                ]
+                              );
+                            }}
                             style={{
                               width: 32,
                               height: 32,

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Property } from '../types';
 
-const STORAGE_KEY = '@pgdesk/selected-pg-id';
+const STORAGE_KEY = '@pgdesk/selected-pg';
 
 interface SelectedPgContextValue {
   selectedPg: Property | null;
@@ -18,10 +18,14 @@ export const SelectedPgProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((id) => {
-      if (id) {
-        // Full property will be resolved by the consumer via useProperties
-        setSelectedPgState({ id, name: '', address: '', city: '', ownerId: '', pgType: 'MEN' } as Property);
+    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as Property;
+          setSelectedPgState(parsed);
+        } catch {
+          setSelectedPgState(null);
+        }
       }
       setIsLoading(false);
     });
@@ -29,8 +33,8 @@ export const SelectedPgProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const setSelectedPg = useCallback((pg: Property | null) => {
     setSelectedPgState(pg);
-    if (pg?.id) {
-      AsyncStorage.setItem(STORAGE_KEY, pg.id);
+    if (pg) {
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(pg));
     } else {
       AsyncStorage.removeItem(STORAGE_KEY);
     }

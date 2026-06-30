@@ -44,6 +44,7 @@ export const useCreateRoom = () => {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: [roomsKey, 'pg', vars.pgId] });
       qc.invalidateQueries({ queryKey: [roomsKey, 'floors', vars.pgId] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -52,7 +53,10 @@ export const useUpdateRoom = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Partial<Room> }) => roomsService.update(id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [roomsKey] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [roomsKey] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 };
 
@@ -60,7 +64,10 @@ export const useDeleteRoom = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => roomsService.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [roomsKey] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [roomsKey] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 };
 

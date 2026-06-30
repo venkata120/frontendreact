@@ -7,8 +7,8 @@ const key = 'properties';
 export const useProperties = (ownerId?: string) => {
   return useQuery({
     queryKey: [key, 'list', ownerId],
-    queryFn: () => (ownerId ? propertiesService.listByOwner(ownerId) : propertiesService.list()),
-    enabled: true,
+    queryFn: () => propertiesService.listByOwner(ownerId!),
+    enabled: !!ownerId,
   });
 };
 

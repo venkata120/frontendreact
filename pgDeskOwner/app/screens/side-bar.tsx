@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
+import { View, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Avatar } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
@@ -9,6 +10,7 @@ import { useSelectedPg } from '../../src/context/SelectedPgContext';
 export default function SideBarScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const qc = useQueryClient();
   const { user, signOut } = useAuth();
   const { selectedPg } = useSelectedPg();
 
@@ -17,17 +19,17 @@ export default function SideBarScreen() {
       title: 'Dashboard',
       items: [
         { label: 'Dashboard', icon: 'home', route: '/(app)/(tabs)' },
-        { label: 'Create Property', icon: 'add-circle', route: '/screens/add-property' },
+        { label: 'Create Property', icon: 'add-circle', route: '/(app)/screens/add-property' },
       ],
     },
     {
       title: 'Account',
       items: [
         { label: 'Profile', icon: 'person', route: '/(app)/profile' },
-        { label: 'Manager', icon: 'person', route: '/screens/manager-profile' },
-        { label: 'My Property', icon: 'business', route: '/screens/property-details' },
+        { label: 'Manager', icon: 'person', route: '/(app)/screens/manager-profile' },
+        { label: 'My Property', icon: 'business', route: '/(app)/screens/property-details' },
         { label: 'Wallet', icon: 'wallet', route: '' },
-        { label: 'Notifications', icon: 'notifications', route: '/screens/notifications' },
+        { label: 'Notifications', icon: 'notifications', route: '/(app)/screens/notifications' },
       ],
     },
   ];
@@ -112,7 +114,23 @@ export default function SideBarScreen() {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={signOut}
+            onPress={() => {
+              Alert.alert(
+                'Logout',
+                'Are you sure you want to logout?',
+                [
+                  { text: 'No', style: 'cancel' },
+                  {
+                text: 'Yes',
+                onPress: async () => {
+                  await signOut();
+                  qc.removeQueries({ queryKey: ['properties'] });
+                  qc.removeQueries({ queryKey: ['dashboard'] });
+                },
+              },
+                ]
+              );
+            }}
             style={{
               backgroundColor: theme.colors.danger,
               padding: theme.spacing.md,

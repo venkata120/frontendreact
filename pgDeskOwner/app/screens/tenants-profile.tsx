@@ -1,10 +1,10 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Avatar } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
-import { useTenant, useDeleteTenant } from '../../src/hooks/queries';
-import { bedsService } from '../../src/api/services';
+import { useTenant, useDeleteTenant, useUpdateBedStatus } from '../../src/hooks/queries';
+import { getApiErrorMessage } from '../../src/utils/validation';
 
 export default function TenantsProfileScreen() {
   const theme = useTheme();
@@ -12,6 +12,42 @@ export default function TenantsProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: tenant, isLoading } = useTenant(id);
   const deleteTenant = useDeleteTenant();
+  const updateBedStatus = useUpdateBedStatus();
+
+  const handleCall = async (phone?: string) => {
+    if (!phone) return;
+    const url = `tel:${phone}`;
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+    }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Tenant',
+      'Are you sure you want to delete this tenant?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!id) return;
+            try {
+              await deleteTenant.mutateAsync(id);
+              if (tenant?.bedId) {
+                await updateBedStatus.mutateAsync({ id: tenant.bedId, status: 'VACANT' });
+              }
+              router.back();
+            } catch (err: any) {
+              Alert.alert('Error', getApiErrorMessage(err, 'Failed to delete tenant'));
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const infoItems = tenant
     ? [
@@ -74,16 +110,7 @@ export default function TenantsProfileScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={async () => {
-                if (!id) return;
-                try {
-                  await deleteTenant.mutateAsync(id);
-                  if (tenant?.bedId) {
-                    await bedsService.updateStatus(tenant.bedId, 'VACANT');
-                  }
-                  router.back();
-                } catch {}
-              }}
+              onPress={handleDelete}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -100,7 +127,7 @@ export default function TenantsProfileScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }}>
         <View style={{ paddingHorizontal: theme.spacing.base }}>
           <Card shadow="lg" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.lg }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -114,7 +141,7 @@ export default function TenantsProfileScreen() {
                   </Typography>
                 </View>
               </View>
-              <TouchableOpacity activeOpacity={0.8}>
+              <TouchableOpacity activeOpacity={0.8} onPress={() => handleCall(tenant?.phone)}>
                 <Ionicons name="call" size={24} color={theme.colors.primary} />
               </TouchableOpacity>
             </View>

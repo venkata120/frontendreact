@@ -174,6 +174,7 @@ export default function FoodMessChargesScreen() {
       >
         <TouchableOpacity
           activeOpacity={0.8}
+          onPress={() => router.push('/screens/add-payment' as any)}
           style={{
             backgroundColor: FOOD_COLOR,
             borderRadius: theme.radius.full,

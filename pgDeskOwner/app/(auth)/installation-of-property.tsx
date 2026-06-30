@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Button, Input, StepIndicator } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
+import { useSelectedPg } from '../../src/context/SelectedPgContext';
 import { useCreateProperty } from '../../src/hooks/queries';
 
 const schema = z.object({
@@ -15,7 +16,6 @@ const schema = z.object({
   floors: z.string().min(1, 'Floors is required'),
   city: z.string().min(2, 'City is required'),
   address: z.string().min(5, 'Address is required'),
-  advanceAmount: z.string().min(1, 'Advance amount is required'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -32,6 +32,7 @@ export default function InstallationOfPropertyScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
+  const { setSelectedPg } = useSelectedPg();
   const createProperty = useCreateProperty();
 
   const { control, handleSubmit, formState: { errors }, watch, setValue } = useForm<FormData>({
@@ -40,6 +41,7 @@ export default function InstallationOfPropertyScreen() {
   });
 
   const selectedType = watch('type');
+  // advanceAmount is not collected during initial property installation
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -51,8 +53,8 @@ export default function InstallationOfPropertyScreen() {
         ownerId: user?.id || '',
         pgType,
         numberOfFloors: Number(data.floors) || undefined,
-        advanceAmount: data.advanceAmount ? Number(data.advanceAmount) : undefined,
       });
+      setSelectedPg(property);
       router.push({
         pathname: '/(auth)/review-details',
         params: { propertyId: property.id },
@@ -141,22 +143,6 @@ export default function InstallationOfPropertyScreen() {
                     {errors.type.message}
                   </Typography>
                 )}
-
-                <Controller
-                  control={control}
-                  name="advanceAmount"
-                  render={({ field }) => (
-                    <Input
-                      label="Advance Amount"
-                      placeholder="₹ Enter advance amount"
-                      keyboardType="numeric"
-                      value={field.value}
-                      onChangeText={field.onChange}
-                      error={errors.advanceAmount?.message}
-                      leftIcon="cash-outline"
-                    />
-                  )}
-                />
 
                 <Controller
                   control={control}

@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +10,6 @@ const MESSAGES = [
 
 export default function HelpSupportChatBotScreen() {
   const theme = useTheme();
-  const router = useRouter();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState(MESSAGES);
 

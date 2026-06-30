@@ -17,7 +17,13 @@ export default function LeftTenantsProfileScreen() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (properties && properties.length > 0 && !selectedPg?.name) {
+    if (!properties || properties.length === 0) return;
+    const match = selectedPg?.id ? properties.find((p) => p.id === selectedPg.id) : undefined;
+    if (match) {
+      if (!selectedPg || selectedPg.id !== match.id || selectedPg.name !== match.name) {
+        setSelectedPg(match);
+      }
+    } else if (!selectedPg) {
       setSelectedPg(properties[0]);
     }
   }, [properties, selectedPg, setSelectedPg]);

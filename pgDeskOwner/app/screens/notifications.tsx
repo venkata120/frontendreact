@@ -75,15 +75,6 @@ const formatDate = (iso?: string) => {
   });
 };
 
-const getInitials = (name: string) => {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-};
-
 export default function NotificationsScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -112,6 +103,7 @@ export default function NotificationsScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [formError, setFormError] = useState('');
+  const [pendingNoticeId, setPendingNoticeId] = useState<string | number | null>(null);
 
   const notices = data?.notices || [];
 
@@ -159,19 +151,25 @@ export default function NotificationsScreen() {
   };
 
   const handleSecondaryAction = (notice: NoticeBoard) => {
+    const action = () => {
+      setPendingNoticeId(notice.id);
+      archiveNotice.mutate(notice.id, {
+        onSettled: () => setPendingNoticeId(null),
+        onSuccess: () => {
+          if (notice.noticeType === 'REQUEST') {
+            Alert.alert('Approved', 'The request has been approved.');
+          }
+        },
+      });
+    };
+
     if (notice.noticeType === 'REQUEST') {
       Alert.alert('Approve', `Approve request: ${notice.title}?`, [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Approve',
-          onPress: () =>
-            archiveNotice.mutate(notice.id, {
-              onSuccess: () => Alert.alert('Approved', 'The request has been approved.'),
-            }),
-        },
+        { text: 'Approve', onPress: action },
       ]);
     } else {
-      archiveNotice.mutate(notice.id);
+      action();
     }
   };
 
@@ -298,7 +296,8 @@ export default function NotificationsScreen() {
                       borderColor: isRequest ? theme.colors.primary : theme.colors.border,
                     }}
                     onPress={() => handleSecondaryAction(notice)}
-                    loading={archiveNotice.isPending}
+                    loading={archiveNotice.isPending && pendingNoticeId === notice.id}
+                    disabled={archiveNotice.isPending && pendingNoticeId !== notice.id}
                   />
                   <Button
                     title={actions.primary.label}

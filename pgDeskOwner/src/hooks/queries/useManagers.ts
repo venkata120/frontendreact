@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersService, managerAssignmentsService } from '../../api/services';
-import type { User, UserDTO, ManagerPgAssignment } from '../../types';
+import type { UserDTO } from '../../types';
 
 const managersKey = 'managers';
 const assignmentsKey = 'manager-assignments';
@@ -44,5 +44,21 @@ export const useRemoveManager = () => {
     mutationFn: ({ managerId, pgId }: { managerId: string; pgId: string }) =>
       managerAssignmentsService.remove(managerId, pgId),
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: [assignmentsKey, 'pg', vars.pgId] }),
+  });
+};
+
+export const useUpdateManager = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<UserDTO> }) => usersService.update(id, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [managersKey] }),
+  });
+};
+
+export const useDeleteManager = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => usersService.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [managersKey] }),
   });
 };

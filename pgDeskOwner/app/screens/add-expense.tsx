@@ -10,11 +10,22 @@ import { useSelectedPg } from '../../src/context/SelectedPgContext';
 import { useCreateExpense, useExpenseMasters } from '../../src/hooks/queries';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useMemo, useState } from 'react';
+import { regex, messages, getApiErrorMessage } from '../../src/utils/validation';
 
 const schema = z.object({
-  amount: z.string().min(1, 'Amount is required'),
-  expenseMonth: z.string().min(1, 'Month is required'),
-  expenseYear: z.string().min(1, 'Year is required'),
+  amount: z.string().min(1, messages.required('Amount')).regex(regex.digitsOnly, 'Amount must be a valid number'),
+  expenseMonth: z
+    .string()
+    .min(1, messages.required('Month'))
+    .regex(/^\d{2}$/, 'Month must be 2 digits')
+    .refine((v) => {
+      const n = Number(v);
+      return n >= 1 && n <= 12;
+    }, 'Month must be between 01 and 12'),
+  expenseYear: z
+    .string()
+    .min(1, messages.required('Year'))
+    .regex(/^\d{4}$/, 'Year must be 4 digits'),
   notes: z.string().optional(),
 });
 
@@ -25,7 +36,7 @@ export default function AddExpenseScreen() {
   const router = useRouter();
   const { selectedPgId } = useSelectedPg();
   const createExpense = useCreateExpense();
-  const { data: masters } = useExpenseMasters();
+  const { data: masters, isLoading: mastersLoading } = useExpenseMasters();
   const { user } = useAuth();
   const [masterModalVisible, setMasterModalVisible] = useState(false);
   const [selectedMasterId, setSelectedMasterId] = useState<string>('');
@@ -51,16 +62,20 @@ export default function AddExpenseScreen() {
       Alert.alert('Category required', 'Please select an expense category');
       return;
     }
-    await createExpense.mutateAsync({
-      pgPropertyId: selectedPgId,
-      expenseMasterId: selectedMasterId,
-      amount: Number(data.amount),
-      expenseMonth: data.expenseMonth,
-      expenseYear: Number(data.expenseYear),
-      notes: data.notes,
-      createdBy: user?.id || '',
-    });
-    router.back();
+    try {
+      await createExpense.mutateAsync({
+        pgPropertyId: selectedPgId,
+        expenseMasterId: selectedMasterId,
+        amount: Number(data.amount),
+        expenseMonth: data.expenseMonth,
+        expenseYear: Number(data.expenseYear),
+        notes: data.notes,
+        createdBy: user?.id || '',
+      });
+      router.back();
+    } catch (err: any) {
+      Alert.alert('Error', getApiErrorMessage(err, 'Failed to add expense'));
+    }
   };
 
   return (
@@ -93,16 +108,16 @@ export default function AddExpenseScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }}>
         <View style={{ paddingHorizontal: theme.spacing.base }}>
           <Card shadow="lg" padding={theme.spacing.lg}>
-            <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>Category</Typography>
+            <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>Category *</Typography>
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => setMasterModalVisible(true)}
               style={{
                 borderWidth: 1,
-                borderColor: theme.colors.border,
+                borderColor: !selectedMasterId ? theme.colors.danger : theme.colors.border,
                 borderRadius: theme.radius.md,
                 paddingHorizontal: theme.spacing.md,
                 paddingVertical: theme.spacing.md,
@@ -113,10 +128,15 @@ export default function AddExpenseScreen() {
               }}
             >
               <Typography variant="bodyMedium" color={selectedMaster ? theme.colors.text : theme.colors.textMuted}>
-                {selectedMaster ? selectedMaster.label : 'Select category'}
+                {selectedMaster ? selectedMaster.label : (mastersLoading ? 'Loading categories...' : 'Select category')}
               </Typography>
               <Ionicons name="chevron-down" size={18} color={theme.colors.textMuted} />
             </TouchableOpacity>
+            {!selectedMasterId && (
+              <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                Category is required
+              </Typography>
+            )}
 
             <Controller control={control} name="amount" render={({ field }) => (
               <Input label="Amount *" placeholder="Enter amount" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.amount?.message} leftIcon="cash-outline" />
@@ -152,27 +172,33 @@ export default function AddExpenseScreen() {
                 <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
-            <FlatList
-              data={masterOptions}
-              keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    setSelectedMasterId(item.value);
-                    setMasterModalVisible(false);
-                  }}
-                  style={{
-                    padding: theme.spacing.base,
-                    borderBottomWidth: 1,
-                    borderBottomColor: theme.colors.borderLight,
-                    backgroundColor: item.value === selectedMasterId ? theme.colors.primarySurface : theme.colors.white,
-                  }}
-                >
-                  <Typography variant="bodyMedium" color={item.value === selectedMasterId ? theme.colors.primary : theme.colors.text}>{item.label}</Typography>
-                </TouchableOpacity>
-              )}
-            />
+            {masterOptions.length === 0 ? (
+              <View style={{ padding: theme.spacing.xl, alignItems: 'center' }}>
+                <Typography variant="body" color={theme.colors.textMuted}>No categories available</Typography>
+              </View>
+            ) : (
+              <FlatList
+                data={masterOptions}
+                keyExtractor={(item) => item.value}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setSelectedMasterId(item.value);
+                      setMasterModalVisible(false);
+                    }}
+                    style={{
+                      padding: theme.spacing.base,
+                      borderBottomWidth: 1,
+                      borderBottomColor: theme.colors.borderLight,
+                      backgroundColor: item.value === selectedMasterId ? theme.colors.primarySurface : theme.colors.white,
+                    }}
+                  >
+                    <Typography variant="bodyMedium" color={item.value === selectedMasterId ? theme.colors.primary : theme.colors.text}>{item.label}</Typography>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
           </View>
         </View>
       </Modal>

@@ -4,7 +4,6 @@ import {
   TouchableOpacityProps,
   ActivityIndicator,
   ViewStyle,
-  TextStyle,
 } from 'react-native';
 import { Typography } from '../Typography/Typography';
 import { useTheme } from '../../hooks/useTheme';

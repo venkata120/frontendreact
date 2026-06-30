@@ -42,7 +42,7 @@ export default function StaffManagementScreen() {
     setError(null);
     try {
       const existing = await AsyncStorage.getItem(STAFF_STORAGE_KEY);
-      const list: Array<FormData & { pgId: string; id: string }> = existing ? JSON.parse(existing) : [];
+      const list: (FormData & { pgId: string; id: string })[] = existing ? JSON.parse(existing) : [];
       list.push({
         id: `${Date.now()}`,
         pgId: selectedPg.id,

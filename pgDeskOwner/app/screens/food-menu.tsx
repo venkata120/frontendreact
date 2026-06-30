@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -253,18 +254,26 @@ export default function FoodMenuScreen() {
     ]);
   };
 
-  const updateField = <K extends keyof FoodMenu>(field: K, value: FoodMenu[K]) => {
+  const updateField = useCallback(<K extends keyof FoodMenu>(field: K, value: FoodMenu[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: '' }));
-  };
+  }, [errors]);
 
   const handleRepeatTypeChange = (value: RepeatType) => {
     let days = form.repeatDays || [];
     if (value === 'EVERYDAY') days = [1, 2, 3, 4, 5, 6, 7];
     else if (value === 'WEEKLY' && days.length === 0) days = [2, 3, 4, 5, 6];
+    else if (value === 'CUSTOM' && days.length === 0) days = [];
     updateField('repeatType', value);
     updateField('repeatDays', days);
   };
+
+  // Ensure mandatory menu date is present when a SPECIAL menu is selected
+  useEffect(() => {
+    if (form.menuType === 'SPECIAL' && !form.menuDate) {
+      updateField('menuDate', dayjs().format('YYYY-MM-DD'));
+    }
+  }, [form.menuType, form.menuDate, updateField]);
 
   const addItem = () => {
     setForm((prev) => ({ ...prev, items: [...prev.items, EMPTY_ITEM()] }));
@@ -444,7 +453,6 @@ export default function FoodMenuScreen() {
               <Typography variant="bodyMedium" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm, textAlign: 'center' }}>
                 Select a property to view and manage food menus.
               </Typography>
-              <Button title="Add Menu" onPress={() => openAddMenu()} style={{ marginTop: theme.spacing.md }} />
             </Card>
           ) : isLoading ? (
             <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: theme.spacing.xl }} />
@@ -454,7 +462,6 @@ export default function FoodMenuScreen() {
               <Typography variant="bodyMedium" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm, textAlign: 'center' }}>
                 {searchQuery ? 'No menus match your search.' : 'No food menus added yet.'}
               </Typography>
-              <Button title="Add Menu" onPress={() => openAddMenu()} style={{ marginTop: theme.spacing.md }} />
             </Card>
           ) : (
             groupedMenus.map(([date, dateMenus]) => {
@@ -565,7 +572,7 @@ export default function FoodMenuScreen() {
         visible={menuModalVisible}
         onRequestClose={closeMenuModal}
       >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.72)' }}>
           <View
             style={{
               backgroundColor: theme.colors.background,

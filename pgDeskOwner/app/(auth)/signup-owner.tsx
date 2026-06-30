@@ -9,17 +9,37 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 import { usersService } from '../../src/api/services';
 import { useState } from 'react';
+import { regex, messages, normalizeMobile, getApiErrorMessage } from '../../src/utils/validation';
 
 const schema = z.object({
-  fullName: z.string().min(2, 'Full name is required'),
-  email: z.string().email('Enter a valid email'),
-  mobile: z.string().min(10, 'Enter a valid mobile number'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string().min(6, 'Confirm password is required'),
-  aadhaar: z.string().min(12, 'Enter a valid Aadhaar number'),
-  location: z.string().min(3, 'Location is required'),
+  fullName: z
+    .string()
+    .min(1, messages.required('Full Name'))
+    .regex(regex.alphabetsOnly, messages.alphabetsOnly('Full Name')),
+  email: z
+    .string()
+    .min(1, messages.required('Email'))
+    .regex(regex.email, messages.validEmail('Email')),
+  mobile: z
+    .string()
+    .min(1, messages.required('Mobile Number'))
+    .regex(regex.mobile, messages.validMobile('Mobile Number')),
+  password: z
+    .string()
+    .min(1, messages.required('Password'))
+    .min(6, messages.minLength('Password', 6)),
+  confirmPassword: z
+    .string()
+    .min(1, messages.required('Confirm Password')),
+  aadhaar: z
+    .string()
+    .min(1, messages.required('Aadhaar Number'))
+    .regex(regex.aadhaar, messages.validAadhaar()),
+  location: z
+    .string()
+    .min(1, messages.required('Location')),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
+  message: messages.passwordMatch(),
   path: ['confirmPassword'],
 });
 
@@ -42,13 +62,6 @@ export default function SignupOwnerScreen() {
     resolver: zodResolver(schema),
   });
 
-  const normalizeMobile = (mobile: string): string => {
-    const digits = mobile.replace(/\D/g, '');
-    if (mobile.trim().startsWith('+')) return mobile.trim();
-    if (digits.length === 10) return `+91${digits}`;
-    return `+${digits}`;
-  };
-
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setError(null);
@@ -66,7 +79,7 @@ export default function SignupOwnerScreen() {
       await login(data.email, data.password, 'owner');
       router.push('/(auth)/installation-of-property');
     } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'Signup failed';
+      const message = getApiErrorMessage(err, 'Signup failed');
       setError(message);
       const fullUrl = `${err?.config?.baseURL || ''}${err?.config?.url || ''}`;
       console.log('Signup error:', err?.response?.status, message, fullUrl);
@@ -79,145 +92,154 @@ export default function SignupOwnerScreen() {
     <ScreenWrapper avoidKeyboard backgroundColor="#8FA3B8">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={{ flex: 1 }}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
-            <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg }}>
-              <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: theme.spacing.lg, width: 40 }}>
-                <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
-              </TouchableOpacity>
+          <View
+            style={{
+              paddingHorizontal: theme.spacing.base,
+              paddingTop: theme.spacing.lg,
+              backgroundColor: '#8FA3B8',
+              zIndex: 10,
+              elevation: 10,
+            }}
+          >
+            <TouchableOpacity onPress={() => router.back()} style={{ width: 40, height: 40, justifyContent: 'center' }}>
+              <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+            </TouchableOpacity>
+            <StepIndicator steps={STEPS} currentStep={0} style={{ marginBottom: theme.spacing.lg, marginTop: theme.spacing.sm }} />
 
-              <StepIndicator steps={STEPS} currentStep={0} style={{ marginBottom: theme.spacing.xl }} />
-
-              <View style={{ marginBottom: theme.spacing.md }}>
-                <Typography variant="headline2" color={theme.colors.white} align="center">
-                  Let&apos;s set up your profile
-                </Typography>
-                <Typography variant="body" color="rgba(255,255,255,0.8)" align="center" style={{ marginTop: theme.spacing.sm }}>
-                  Please provide basic details
-                </Typography>
-              </View>
-
-              <Typography variant="title1" color={theme.colors.white} align="center" style={{ marginBottom: theme.spacing.lg }}>
-                Signup as OWNER
+            <View style={{ marginBottom: theme.spacing.md }}>
+              <Typography variant="headline2" color={theme.colors.white} align="center">
+                Let&apos;s set up your profile
               </Typography>
+              <Typography variant="body" color="rgba(255,255,255,0.8)" align="center" style={{ marginTop: theme.spacing.sm }}>
+                Please provide basic details
+              </Typography>
+            </View>
 
-              <View
-                style={{
-                  backgroundColor: theme.colors.white,
-                  borderRadius: theme.radius.xl,
-                  padding: theme.spacing.lg,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 12,
-                  elevation: 5,
-                }}
-              >
-                <Controller
-                  control={control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <Input
-                      label="Full Name *"
-                      placeholder="Enter full name"
-                      value={field.value}
-                      onChangeText={field.onChange}
-                      error={errors.fullName?.message}
-                    />
-                  )}
-                />
+            <Typography variant="title1" color={theme.colors.white} align="center" style={{ marginBottom: theme.spacing.lg }}>
+              Signup as OWNER
+            </Typography>
+          </View>
 
-                <Controller
-                  control={control}
-                  name="email"
-                  render={({ field }) => (
-                    <Input
-                      label="Email *"
-                      placeholder="Enter email"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      value={field.value}
-                      onChangeText={field.onChange}
-                      error={errors.email?.message}
-                    />
-                  )}
-                />
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160, paddingHorizontal: theme.spacing.base }}>
+            <View
+              style={{
+                backgroundColor: theme.colors.white,
+                borderRadius: theme.radius.xl,
+                padding: theme.spacing.lg,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.1,
+                shadowRadius: 12,
+                elevation: 5,
+              }}
+            >
+              <Controller
+                control={control}
+                name="fullName"
+                render={({ field }) => (
+                  <Input
+                    label="Full Name *"
+                    placeholder="Enter full name"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={errors.fullName?.message}
+                  />
+                )}
+              />
 
-                <Controller
-                  control={control}
-                  name="mobile"
-                  render={({ field }) => (
-                    <Input
-                      label="Mobile Number *"
-                      placeholder="Enter mobile number"
-                      keyboardType="phone-pad"
-                      maxLength={15}
-                      value={field.value}
-                      onChangeText={field.onChange}
-                      error={errors.mobile?.message}
-                    />
-                  )}
-                />
+              <Controller
+                control={control}
+                name="email"
+                render={({ field }) => (
+                  <Input
+                    label="Email *"
+                    placeholder="Enter email"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={errors.email?.message}
+                  />
+                )}
+              />
 
-                <Controller
-                  control={control}
-                  name="password"
-                  render={({ field }) => (
-                    <Input
-                      label="Password *"
-                      placeholder="Enter password"
-                      secureTextEntry
-                      value={field.value}
-                      onChangeText={field.onChange}
-                      error={errors.password?.message}
-                    />
-                  )}
-                />
+              <Controller
+                control={control}
+                name="mobile"
+                render={({ field }) => (
+                  <Input
+                    label="Mobile Number *"
+                    placeholder="Enter mobile number"
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={errors.mobile?.message}
+                  />
+                )}
+              />
 
-                <Controller
-                  control={control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <Input
-                      label="Confirm Password *"
-                      placeholder="Confirm password"
-                      secureTextEntry
-                      value={field.value}
-                      onChangeText={field.onChange}
-                      error={errors.confirmPassword?.message}
-                    />
-                  )}
-                />
+              <Controller
+                control={control}
+                name="password"
+                render={({ field }) => (
+                  <Input
+                    label="Password *"
+                    placeholder="Enter password"
+                    secureTextEntry
+                    enableVisibilityToggle
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={errors.password?.message}
+                  />
+                )}
+              />
 
-                <Controller
-                  control={control}
-                  name="aadhaar"
-                  render={({ field }) => (
-                    <Input
-                      label="Aadhaar Number *"
-                      placeholder="Enter Aadhaar number"
-                      keyboardType="numeric"
-                      maxLength={16}
-                      value={field.value}
-                      onChangeText={field.onChange}
-                      error={errors.aadhaar?.message}
-                    />
-                  )}
-                />
+              <Controller
+                control={control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <Input
+                    label="Confirm Password *"
+                    placeholder="Confirm password"
+                    secureTextEntry
+                    enableVisibilityToggle
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={errors.confirmPassword?.message}
+                  />
+                )}
+              />
 
-                <Controller
-                  control={control}
-                  name="location"
-                  render={({ field }) => (
-                    <Input
-                      label="Location"
-                      placeholder="Enter location"
-                      value={field.value}
-                      onChangeText={field.onChange}
-                      error={errors.location?.message}
-                    />
-                  )}
-                />
-              </View>
+              <Controller
+                control={control}
+                name="aadhaar"
+                render={({ field }) => (
+                  <Input
+                    label="Aadhaar Number *"
+                    placeholder="Enter Aadhaar number"
+                    keyboardType="numeric"
+                    maxLength={12}
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={errors.aadhaar?.message}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="location"
+                render={({ field }) => (
+                  <Input
+                    label="Location *"
+                    placeholder="Enter location"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={errors.location?.message}
+                  />
+                )}
+              />
 
               {error && (
                 <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.sm }}>

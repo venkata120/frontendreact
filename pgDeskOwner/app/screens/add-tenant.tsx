@@ -1,25 +1,44 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, TouchableOpacity, Modal, FlatList } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Modal, FlatList, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Input, Button, Card } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
-import { useCreateTenant } from '../../src/hooks/queries';
+import { useCreateTenant, useUpdateBedStatus } from '../../src/hooks/queries';
 import { useRoomsWithBeds } from '../../src/hooks/queries/useRoomsWithBeds';
-import { bedsService } from '../../src/api/services';
-
+import { regex, messages, normalizeMobile, getApiErrorMessage } from '../../src/utils/validation';
 
 const schema = z.object({
-  fullName: z.string().min(2, 'Full name is required'),
-  phone: z.string().min(10, 'Phone is required'),
-  email: z.string().email().optional().or(z.literal('')),
-  emergencyContact: z.string().optional().or(z.literal('')),
-  rentPerMonth: z.string().min(1, 'Rent is required'),
-  advanceAmount: z.string().optional(),
-  joinDate: z.string().min(1, 'Join date is required'),
+  fullName: z
+    .string()
+    .min(1, messages.required('Full Name'))
+    .regex(regex.alphabetsOnly, messages.alphabetsOnly('Full Name')),
+  phone: z
+    .string()
+    .min(1, messages.required('Mobile Number'))
+    .regex(regex.mobile, messages.validMobile('Mobile Number')),
+  email: z.union([
+    z.literal(''),
+    z.string().regex(regex.email, messages.validEmail('Email')),
+  ]).optional(),
+  emergencyContact: z.union([
+    z.literal(''),
+    z.string().regex(regex.mobile, messages.validMobile('Emergency Contact')),
+  ]).optional(),
+  rentPerMonth: z
+    .string()
+    .min(1, messages.required('Rent Per Month'))
+    .regex(regex.digitsOnly, 'Rent must be a valid number'),
+  advanceAmount: z
+    .union([
+      z.literal(''),
+      z.string().regex(regex.digitsOnly, 'Advance Amount must be a valid number'),
+    ])
+    .optional(),
+  joinDate: z.string().min(1, messages.required('Join Date')),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -106,6 +125,7 @@ export default function AddTenantScreen() {
   const router = useRouter();
   const { pgId } = useLocalSearchParams<{ pgId: string }>();
   const createTenant = useCreateTenant();
+  const updateBedStatus = useUpdateBedStatus();
   const { data: rooms, isLoading: roomsLoading } = useRoomsWithBeds(pgId);
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -145,29 +165,25 @@ export default function AddTenantScreen() {
     }
     setError(null);
     try {
-      const normalizePhone = (phone: string): string => {
-        const digits = phone.replace(/\D/g, '');
-        if (phone.trim().startsWith('+')) return phone.trim();
-        if (digits.length === 10) return `+91${digits}`;
-        return `+${digits}`;
-      };
       await createTenant.mutateAsync({
         pgId,
         bedId: selectedBedId,
         fullName: data.fullName,
-        phone: normalizePhone(data.phone),
+        phone: normalizeMobile(data.phone),
         email: data.email,
-        emergencyContact: data.emergencyContact ? normalizePhone(data.emergencyContact) : undefined,
+        emergencyContact: data.emergencyContact ? normalizeMobile(data.emergencyContact) : undefined,
         joinDate: data.joinDate,
         exitDate: undefined,
         status: 'ACTIVE',
         rentPerMonth: Number(data.rentPerMonth),
         advanceAmount: data.advanceAmount ? Number(data.advanceAmount) : 0,
       });
-      await bedsService.updateStatus(selectedBedId, 'OCCUPIED');
-      router.back();
+      await updateBedStatus.mutateAsync({ id: selectedBedId, status: 'OCCUPIED' });
+      Alert.alert('Success', 'Tenant added successfully', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Failed to add tenant');
+      setError(getApiErrorMessage(err, 'Failed to add tenant'));
     }
   };
 
@@ -201,80 +217,82 @@ export default function AddTenantScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
-        <View style={{ paddingHorizontal: theme.spacing.base }}>
-          <Card shadow="lg" padding={theme.spacing.lg}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
-              <Ionicons name="person" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
-              <Typography variant="title1">Personal information</Typography>
-            </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.xl }} keyboardShouldPersistTaps="handled">
+          <View style={{ paddingHorizontal: theme.spacing.base }}>
+            <Card shadow="lg" padding={theme.spacing.lg}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
+                <Ionicons name="person" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                <Typography variant="title1">Personal information</Typography>
+              </View>
 
-            <Controller control={control} name="fullName" render={({ field }) => (
-              <Input label="Full Name *" placeholder="Enter full name" value={field.value} onChangeText={field.onChange} error={errors.fullName?.message} leftIcon="person-outline" />
-            )} />
-            <Controller control={control} name="phone" render={({ field }) => (
-              <Input label="Mobile number *" placeholder="Enter mobile number" keyboardType="phone-pad" value={field.value} onChangeText={field.onChange} error={errors.phone?.message} leftIcon="call-outline" />
-            )} />
-            <Controller control={control} name="email" render={({ field }) => (
-              <Input label="Email" placeholder="Enter email" keyboardType="email-address" autoCapitalize="none" value={field.value} onChangeText={field.onChange} error={errors.email?.message} leftIcon="mail-outline" />
-            )} />
-            <Controller control={control} name="emergencyContact" render={({ field }) => (
-              <Input label="Emergency Contact" placeholder="Enter emergency contact" keyboardType="phone-pad" value={field.value} onChangeText={field.onChange} error={errors.emergencyContact?.message} leftIcon="people-outline" />
-            )} />
-            <Controller control={control} name="rentPerMonth" render={({ field }) => (
-              <Input label="Rent Per Month *" placeholder="Enter rent" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.rentPerMonth?.message} leftIcon="cash-outline" />
-            )} />
-            <Controller control={control} name="advanceAmount" render={({ field }) => (
-              <Input label="Advance Amount" placeholder="Enter advance amount" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.advanceAmount?.message} leftIcon="wallet-outline" />
-            )} />
-            <Controller control={control} name="joinDate" render={({ field }) => (
-              <Input label="Join Date *" placeholder="YYYY-MM-DD" value={field.value} onChangeText={field.onChange} error={errors.joinDate?.message} leftIcon="calendar-outline" />
-            )} />
+              <Controller control={control} name="fullName" render={({ field }) => (
+                <Input label="Full Name *" placeholder="Enter full name" value={field.value} onChangeText={field.onChange} error={errors.fullName?.message} leftIcon="person-outline" />
+              )} />
+              <Controller control={control} name="phone" render={({ field }) => (
+                <Input label="Mobile number *" placeholder="Enter mobile number" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={field.onChange} error={errors.phone?.message} leftIcon="call-outline" />
+              )} />
+              <Controller control={control} name="email" render={({ field }) => (
+                <Input label="Email" placeholder="Enter email" keyboardType="email-address" autoCapitalize="none" value={field.value} onChangeText={field.onChange} error={errors.email?.message} leftIcon="mail-outline" />
+              )} />
+              <Controller control={control} name="emergencyContact" render={({ field }) => (
+                <Input label="Emergency Contact" placeholder="Enter emergency contact" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={field.onChange} error={errors.emergencyContact?.message} leftIcon="people-outline" />
+              )} />
+              <Controller control={control} name="rentPerMonth" render={({ field }) => (
+                <Input label="Rent Per Month *" placeholder="Enter rent" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.rentPerMonth?.message} leftIcon="cash-outline" />
+              )} />
+              <Controller control={control} name="advanceAmount" render={({ field }) => (
+                <Input label="Advance Amount" placeholder="Enter advance amount" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.advanceAmount?.message} leftIcon="wallet-outline" />
+              )} />
+              <Controller control={control} name="joinDate" render={({ field }) => (
+                <Input label="Join Date *" placeholder="YYYY-MM-DD" value={field.value} onChangeText={field.onChange} error={errors.joinDate?.message} leftIcon="calendar-outline" />
+              )} />
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.md, marginBottom: theme.spacing.sm }}>
-              <Ionicons name="bed" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
-              <Typography variant="title1">Room Allocation</Typography>
-            </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.md, marginBottom: theme.spacing.sm }}>
+                <Ionicons name="bed" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                <Typography variant="title1">Room Allocation</Typography>
+              </View>
 
-            {roomsLoading ? (
-              <Typography variant="body" color={theme.colors.textMuted}>Loading rooms...</Typography>
-            ) : roomsList.length === 0 ? (
-              <Typography variant="body" color={theme.colors.textMuted}>No rooms found. Please add rooms first.</Typography>
-            ) : (
-              <>
-                <Picker
-                  label="Select Room"
-                  value={selectedRoomId}
-                  placeholder="Choose a room"
-                  options={roomOptions}
-                  onSelect={setSelectedRoomId}
-                />
-                {selectedRoomId && (
-                  <>
-                    {vacantBeds.length === 0 ? (
-                      <Typography variant="body" color={theme.colors.danger}>No vacant beds in this room.</Typography>
-                    ) : (
-                      <Picker
-                        label="Select Bed"
-                        value={selectedBedId}
-                        placeholder="Choose a vacant bed"
-                        options={bedOptions}
-                        onSelect={setSelectedBedId}
-                      />
-                    )}
-                  </>
-                )}
-              </>
-            )}
+              {roomsLoading ? (
+                <Typography variant="body" color={theme.colors.textMuted}>Loading rooms...</Typography>
+              ) : roomsList.length === 0 ? (
+                <Typography variant="body" color={theme.colors.textMuted}>No rooms found. Please add rooms first.</Typography>
+              ) : (
+                <>
+                  <Picker
+                    label="Select Room"
+                    value={selectedRoomId}
+                    placeholder="Choose a room"
+                    options={roomOptions}
+                    onSelect={setSelectedRoomId}
+                  />
+                  {selectedRoomId && (
+                    <>
+                      {vacantBeds.length === 0 ? (
+                        <Typography variant="body" color={theme.colors.danger}>No vacant beds in this room.</Typography>
+                      ) : (
+                        <Picker
+                          label="Select Bed"
+                          value={selectedBedId}
+                          placeholder="Choose a vacant bed"
+                          options={bedOptions}
+                          onSelect={setSelectedBedId}
+                        />
+                      )}
+                    </>
+                  )}
+                </>
+              )}
 
-            {error && (
-              <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.sm }}>
-                {error}
-              </Typography>
-            )}
-          </Card>
-        </View>
-      </ScrollView>
+              {error && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.sm }}>
+                  {error}
+                </Typography>
+              )}
+            </Card>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={{ padding: theme.spacing.base }}>
         <Button

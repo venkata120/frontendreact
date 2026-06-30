@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   TextInput,
   TextInputProps,
   View,
   ViewStyle,
   TextStyle,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography } from '../Typography/Typography';
@@ -17,6 +18,7 @@ interface Props extends TextInputProps {
   rightIcon?: React.ReactNode | string;
   containerStyle?: ViewStyle;
   inputStyle?: TextStyle;
+  enableVisibilityToggle?: boolean;
 }
 
 export const Input: React.FC<Props> = ({
@@ -27,10 +29,15 @@ export const Input: React.FC<Props> = ({
   containerStyle,
   inputStyle,
   placeholderTextColor,
+  enableVisibilityToggle,
+  secureTextEntry,
   ...rest
 }) => {
   const theme = useTheme();
   const isMultiline = rest.multiline === true;
+  const [visible, setVisible] = useState(false);
+  const isPassword = enableVisibilityToggle && secureTextEntry;
+  const effectiveSecureTextEntry = isPassword ? !visible : secureTextEntry;
 
   const renderIcon = (icon: React.ReactNode | string | undefined) => {
     if (!icon) return null;
@@ -89,8 +96,22 @@ export const Input: React.FC<Props> = ({
             inputStyle,
           ]}
           placeholderTextColor={placeholderTextColor ?? theme.colors.placeholder}
+          secureTextEntry={effectiveSecureTextEntry}
           {...rest}
         />
+        {isPassword && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setVisible((v) => !v)}
+            style={{ marginLeft: theme.spacing.sm, padding: 4 }}
+          >
+            <Ionicons
+              name={visible ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={theme.colors.placeholder}
+            />
+          </TouchableOpacity>
+        )}
         {rightIcon && (
           <View style={{ marginLeft: theme.spacing.sm }}>
             {renderIcon(rightIcon)}

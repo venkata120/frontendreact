@@ -27,7 +27,7 @@ export default function ManagerHomeScreen() {
 
   const managerId = user?.id;
   const overviewParams = useMemo(
-    () => ({ month: currentMonth, year: currentYear, managerId }),
+    () => ({ month: currentMonth, year: currentYear, managerId, userId: managerId }),
     [currentMonth, currentYear, managerId]
   );
   const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useDashboardOverview(overviewParams);
@@ -68,6 +68,7 @@ export default function ManagerHomeScreen() {
         icon: 'bed-outline' as const,
         color: theme.colors.accentPurple,
         bg: '#F3E8FF',
+        route: '/(app)/(manager-tabs)/rooms',
       },
       {
         label: 'Total Tenants',
@@ -75,6 +76,7 @@ export default function ManagerHomeScreen() {
         icon: 'people-outline' as const,
         color: theme.colors.info,
         bg: theme.colors.primarySurface,
+        route: '/(app)/(manager-tabs)/tenants',
       },
       {
         label: 'Collected Amount',
@@ -82,6 +84,7 @@ export default function ManagerHomeScreen() {
         icon: 'cash-outline' as const,
         color: theme.colors.success,
         bg: theme.colors.successSurface,
+        route: '/screens/collected-amount',
       },
       {
         label: 'Pending Payments',
@@ -89,6 +92,7 @@ export default function ManagerHomeScreen() {
         icon: 'time-outline' as const,
         color: theme.colors.warning,
         bg: theme.colors.warningSurface,
+        route: '/screens/pending-dues',
       },
     ],
     [pgSummary, theme]
@@ -160,7 +164,12 @@ export default function ManagerHomeScreen() {
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
               {OVERVIEW_ITEMS.map((item) => (
-                <View key={item.label} style={{ width: '48%', marginBottom: theme.spacing.md }}>
+                <TouchableOpacity
+                  key={item.label}
+                  activeOpacity={0.8}
+                  onPress={() => item.route && router.push(item.route as any)}
+                  style={{ width: '48%', marginBottom: theme.spacing.md }}
+                >
                   <Card shadow="sm" padding={theme.spacing.md}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View
@@ -176,13 +185,13 @@ export default function ManagerHomeScreen() {
                         <Ionicons name={item.icon} size={24} color={item.color} />
                       </View>
                       <View style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
-                        <Typography variant="caption" color={theme.colors.textMuted}>{item.label}</Typography>
-                        <Typography variant="title2" color={item.color}>{item.value}</Typography>
+                        <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1}>{item.label}</Typography>
+                        <Typography variant="title2" color={item.color} numberOfLines={1}>{item.value}</Typography>
                       </View>
-                      <Ionicons name="chevron-down" size={16} color={theme.colors.textMuted} />
+                      <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
                     </View>
                   </Card>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           )}

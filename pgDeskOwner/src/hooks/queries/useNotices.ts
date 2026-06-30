@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { noticesService } from '../../api/services';
-import type { NoticeBoard, NoticeBoardSearchRequest, CreateNoticePayload } from '../../types';
+import type { NoticeBoardSearchRequest, CreateNoticePayload } from '../../types';
 
 const key = 'notices';
 

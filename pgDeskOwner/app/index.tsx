@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../src/redux/store';
 import { getRoleBasedRoute } from '../src/utils/roleRouting';
 
-const { width, height } = Dimensions.get('window');
+Dimensions.get('window');
 
 export default function SplashScreen() {
   const router = useRouter();

@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Image, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, SearchBar, Avatar, PgSelector } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
@@ -11,6 +11,7 @@ import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
 import { useSelectedPg } from '../../../src/context/SelectedPgContext';
 import { useDashboardOverview, useTenantsByPg, useRoomsWithBeds } from '../../../src/hooks/queries';
+import type { Tenant } from '../../../src/types';
 
 export default function TenantsScreen() {
   const theme = useTheme();
@@ -21,6 +22,8 @@ export default function TenantsScreen() {
   const { selectedPg } = useSelectedPg();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'EXITED'>('ALL');
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
 
   const currentMonth = useMemo(() => String(new Date().getMonth() + 1).padStart(2, '0'), []);
   const currentYear = useMemo(() => String(new Date().getFullYear()), []);
@@ -50,9 +53,9 @@ export default function TenantsScreen() {
   );
   const isLoading = tenantsLoading || roomsLoading;
 
-  const tenantsWithRooms = useMemo(() => {
+  const tenantsWithRooms = useMemo<(Tenant & { roomNumber?: string; floor?: number })[]>(() => {
     if (!tenants) return [];
-    if (!roomsWithBeds) return tenants.map((t) => ({ ...t, roomNumber: undefined }));
+    if (!roomsWithBeds) return tenants.map((t) => ({ ...t, roomNumber: undefined, floor: undefined }));
     const bedToRoom = new Map<string, { roomNumber: string; floor: number }>();
     roomsWithBeds.forEach((room) => {
       room.beds?.forEach((bed) => {
@@ -68,15 +71,19 @@ export default function TenantsScreen() {
 
   const filtered = useMemo(() => {
     if (!tenantsWithRooms) return [];
-    if (!search.trim()) return tenantsWithRooms;
+    let result = tenantsWithRooms;
+    if (statusFilter !== 'ALL') {
+      result = result.filter((t) => t.status === statusFilter);
+    }
+    if (!search.trim()) return result;
     const q = search.toLowerCase();
-    return tenantsWithRooms.filter(
+    return result.filter(
       (t) =>
         t.fullName.toLowerCase().includes(q) ||
         t.phone.includes(q) ||
         (t.roomNumber && t.roomNumber.toLowerCase().includes(q))
     );
-  }, [tenantsWithRooms, search]);
+  }, [tenantsWithRooms, search, statusFilter]);
 
   const OVERVIEW_ITEMS = [
     {
@@ -167,18 +174,19 @@ export default function TenantsScreen() {
             </View>
             <TouchableOpacity
               activeOpacity={0.8}
+              onPress={() => setFilterModalOpen(true)}
               style={{
                 width: 48,
                 height: 48,
                 borderRadius: theme.radius.md,
-                backgroundColor: theme.colors.backgroundSecondary,
+                backgroundColor: statusFilter !== 'ALL' ? theme.colors.primarySurface : theme.colors.backgroundSecondary,
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderWidth: 1,
-                borderColor: theme.colors.border,
+                borderColor: statusFilter !== 'ALL' ? theme.colors.primary : theme.colors.border,
               }}
             >
-              <Ionicons name="options-outline" size={22} color={theme.colors.primary} />
+              <Ionicons name="options-outline" size={22} color={statusFilter !== 'ALL' ? theme.colors.primary : theme.colors.text} />
             </TouchableOpacity>
           </View>
 
@@ -244,6 +252,40 @@ export default function TenantsScreen() {
         </View>
 
         </ScrollView>
+
+        <Modal visible={filterModalOpen} transparent animationType="slide" onRequestClose={() => setFilterModalOpen(false)}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <View style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: theme.radius.xl, borderTopRightRadius: theme.radius.xl, padding: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+                <Typography variant="title3" style={{ fontWeight: '600' }}>Filter by status</Typography>
+                <TouchableOpacity onPress={() => setFilterModalOpen(false)}>
+                  <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+              {(['ALL', 'ACTIVE', 'EXITED'] as const).map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setStatusFilter(s);
+                    setFilterModalOpen(false);
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: theme.spacing.md,
+                    borderBottomWidth: 1,
+                    borderBottomColor: theme.colors.border,
+                  }}
+                >
+                  <Typography variant="bodyMedium" style={{ textTransform: 'capitalize' }}>{s.toLowerCase()}</Typography>
+                  {statusFilter === s && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </Modal>
 
         <TouchableOpacity
           activeOpacity={0.8}

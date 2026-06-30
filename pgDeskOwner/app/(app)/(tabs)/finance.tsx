@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Image, Modal, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Avatar, PgSelector } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
@@ -18,8 +18,27 @@ import { useSelectedPg } from '../../../src/context/SelectedPgContext';
 import { ROUTES } from '../../../src/constants';
 import type { ExpenseMaster } from '../../../src/types';
 
-const formatMonthYear = (date: Date) =>
-  date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+const MONTHS = [
+  { label: 'January', value: '01' },
+  { label: 'February', value: '02' },
+  { label: 'March', value: '03' },
+  { label: 'April', value: '04' },
+  { label: 'May', value: '05' },
+  { label: 'June', value: '06' },
+  { label: 'July', value: '07' },
+  { label: 'August', value: '08' },
+  { label: 'September', value: '09' },
+  { label: 'October', value: '10' },
+  { label: 'November', value: '11' },
+  { label: 'December', value: '12' },
+];
+
+const YEARS = Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() - 5 + i));
+
+const formatMonthYear = (month: string, year: string) => {
+  const monthName = MONTHS.find((m) => m.value === month)?.label || month;
+  return `${monthName} ${year}`;
+};
 
 export default function FinanceScreen() {
   const theme = useTheme();
@@ -29,13 +48,15 @@ export default function FinanceScreen() {
   const { selectedPg } = useSelectedPg();
   const [activeTab, setActiveTab] = useState<'income' | 'expenses'>('income');
 
-  const currentMonth = useMemo(() => String(new Date().getMonth() + 1).padStart(2, '0'), []);
-  const currentYear = useMemo(() => String(new Date().getFullYear()), []);
-  const monthLabel = useMemo(() => formatMonthYear(new Date()), []);
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
+  const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
+  const isOwner = user?.role === 'owner';
   const overviewParams = useMemo(
-    () => ({ month: currentMonth, year: currentYear, userId: user?.id }),
-    [currentMonth, currentYear, user?.id]
+    () => ({ month: selectedMonth, year: selectedYear, userId: user?.id, ownerId: isOwner ? user?.id : undefined }),
+    [selectedMonth, selectedYear, user?.id, isOwner]
   );
   const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useDashboardOverview(overviewParams);
 
@@ -64,7 +85,6 @@ export default function FinanceScreen() {
     [overview, selectedPg]
   );
 
-  // Scope rent income to the current month/year to match the home/dashboard view.
   const getMonthValue = (rentMonth: string) => {
     if (rentMonth.includes('-')) {
       return rentMonth.split('-').pop() || rentMonth;
@@ -77,19 +97,16 @@ export default function FinanceScreen() {
       (rentLedgers || [])
         .filter(
           (l) =>
-            String(getMonthValue(l.rentMonth)).padStart(2, '0') === currentMonth &&
-            l.rentYear === Number(currentYear)
+            String(getMonthValue(l.rentMonth)).padStart(2, '0') === selectedMonth &&
+            String(l.rentYear) === selectedYear
         )
         .reduce((sum, l) => sum + (l.collectedAmount || 0), 0),
-    [rentLedgers, currentMonth, currentYear]
+    [rentLedgers, selectedMonth, selectedYear]
   );
 
-  // Food/mess and utility income are not yet tracked separately on the backend.
   const foodIncome = 0;
   const utilityIncome = 0;
 
-  // Income shown is scoped to the selected PG. Rent income is computed from the
-  // selected PG's tenants; food/mess and utility income are not tracked yet.
   const totalIncome = useMemo(
     () => rentIncome + foodIncome + utilityIncome,
     [rentIncome]
@@ -100,7 +117,6 @@ export default function FinanceScreen() {
     [pgSummary]
   );
 
-  // Total expected revenue used for percentage breakdown (collected + pending).
   const totalExpected = useMemo(
     () => totalIncome + pendingPayments,
     [totalIncome, pendingPayments]
@@ -191,7 +207,9 @@ export default function FinanceScreen() {
               <Ionicons name="bar-chart" size={22} color={theme.colors.text} style={{ marginRight: 8 }} />
               <Typography variant="headline2">Finance</Typography>
             </View>
-            <View
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setDatePickerOpen(true)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -205,10 +223,10 @@ export default function FinanceScreen() {
             >
               <Ionicons name="calendar-outline" size={16} color={theme.colors.text} style={{ marginRight: 6 }} />
               <Typography variant="bodyMedium" style={{ fontWeight: '500' }}>
-                {monthLabel}
+                {formatMonthYear(selectedMonth, selectedYear)}
               </Typography>
               <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} style={{ marginLeft: 6 }} />
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Income / Expenses toggle */}
@@ -277,12 +295,6 @@ export default function FinanceScreen() {
               <>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
                   <Typography variant="title1">Income by category</Typography>
-                  <TouchableOpacity activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Typography variant="bodyMedium" color={theme.colors.primary} style={{ fontWeight: '500' }}>
-                      view All
-                    </Typography>
-                    <Ionicons name="chevron-down" size={14} color={theme.colors.primary} style={{ marginLeft: 2 }} />
-                  </TouchableOpacity>
                 </View>
 
                 {incomeItems.map((item) => (
@@ -318,7 +330,7 @@ export default function FinanceScreen() {
                           <Typography variant="bodyMedium" color={item.color} style={{ fontWeight: '700' }}>
                             ₹{item.amount.toLocaleString()}
                           </Typography>
-                          <Ionicons name="chevron-down" size={16} color={theme.colors.textMuted} style={{ marginLeft: 6 }} />
+                          <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} style={{ marginLeft: 6 }} />
                         </View>
                       </View>
                     </Card>
@@ -348,12 +360,6 @@ export default function FinanceScreen() {
               <>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
                   <Typography variant="title1">Expences by category</Typography>
-                  <TouchableOpacity activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Typography variant="bodyMedium" color={theme.colors.primary} style={{ fontWeight: '500' }}>
-                      view All
-                    </Typography>
-                    <Ionicons name="chevron-down" size={14} color={theme.colors.primary} style={{ marginLeft: 2 }} />
-                  </TouchableOpacity>
                 </View>
 
                 {expenseGroups.length > 0 ? (
@@ -386,7 +392,7 @@ export default function FinanceScreen() {
                             <Typography variant="bodyMedium" color={theme.colors.danger} style={{ fontWeight: '700' }}>
                               ₹{item.amount.toLocaleString()}
                             </Typography>
-                            <Ionicons name="chevron-down" size={16} color={theme.colors.textMuted} style={{ marginLeft: 6 }} />
+                            <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} style={{ marginLeft: 6 }} />
                           </View>
                         </View>
                       ))}
@@ -425,6 +431,75 @@ export default function FinanceScreen() {
         )}
       </ScrollView>
 
+      <Modal visible={datePickerOpen} transparent animationType="slide" onRequestClose={() => setDatePickerOpen(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: theme.radius.xl, borderTopRightRadius: theme.radius.xl, padding: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+              <Typography variant="title3" style={{ fontWeight: '600' }}>Select Month & Year</Typography>
+              <TouchableOpacity onPress={() => setDatePickerOpen(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm, fontWeight: '600' }}>Month</Typography>
+            <FlatList
+              data={MONTHS}
+              keyExtractor={(item) => item.value}
+              numColumns={3}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedMonth(item.value)}
+                  style={{
+                    flex: 1,
+                    margin: 4,
+                    paddingVertical: theme.spacing.sm,
+                    borderRadius: theme.radius.md,
+                    backgroundColor: selectedMonth === item.value ? theme.colors.primary : theme.colors.backgroundSecondary,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Typography variant="bodyMedium" color={selectedMonth === item.value ? theme.colors.white : theme.colors.text}>{item.label}</Typography>
+                </TouchableOpacity>
+              )}
+            />
+            <Typography variant="bodyMedium" style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.sm, fontWeight: '600' }}>Year</Typography>
+            <FlatList
+              data={YEARS}
+              keyExtractor={(item) => item}
+              numColumns={4}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedYear(item)}
+                  style={{
+                    flex: 1,
+                    margin: 4,
+                    paddingVertical: theme.spacing.sm,
+                    borderRadius: theme.radius.md,
+                    backgroundColor: selectedYear === item ? theme.colors.primary : theme.colors.backgroundSecondary,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Typography variant="bodyMedium" color={selectedYear === item ? theme.colors.white : theme.colors.text}>{item}</Typography>
+                </TouchableOpacity>
+              )}
+            />
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setDatePickerOpen(false)}
+              style={{
+                backgroundColor: theme.colors.primary,
+                borderRadius: theme.radius.md,
+                paddingVertical: 14,
+                alignItems: 'center',
+                marginTop: theme.spacing.lg,
+              }}
+            >
+              <Typography variant="bodyMedium" color={theme.colors.white} style={{ fontWeight: '600' }}>Done</Typography>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScreenWrapper>
   );
 }

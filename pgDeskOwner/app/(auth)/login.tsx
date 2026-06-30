@@ -3,7 +3,6 @@ import { View, Image, TouchableOpacity, KeyboardAvoidingView, Platform } from 'r
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Button, Input, Header } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
@@ -90,6 +89,7 @@ export default function LoginScreen() {
               <Input
                 placeholder="Enter your password"
                 secureTextEntry
+                enableVisibilityToggle
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}

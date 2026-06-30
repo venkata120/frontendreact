@@ -1,12 +1,34 @@
-import { useRouter } from 'expo-router';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { View, ScrollView, TouchableOpacity, Share, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { ScreenWrapper, Typography, Card, Avatar, Button } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 
 export default function ManagerAssignedSuccessfullyScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{ name?: string; email?: string; password?: string }>();
+
+  const managerName = params.name || 'Manager';
+  const managerEmail = params.email || '-';
+  const managerPassword = params.password || '-';
+
+  const copyCredentials = async () => {
+    const text = `Login ID: ${managerEmail}\nPassword: ${managerPassword}`;
+    await Clipboard.setStringAsync(text);
+    Alert.alert('Copied', 'Login credentials copied to clipboard');
+  };
+
+  const shareCredentials = async () => {
+    try {
+      await Share.share({
+        message: `Manager Login Credentials\nName: ${managerName}\nLogin ID: ${managerEmail}\nPassword: ${managerPassword}`,
+      });
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <ScreenWrapper>
@@ -36,12 +58,12 @@ export default function ManagerAssignedSuccessfullyScreen() {
             </View>
 
             <View style={{ alignItems: 'center', marginBottom: theme.spacing.lg }}>
-              <Avatar size={80} uri="https://i.pravatar.cc/150?u=venkat" name="Venkat.K" />
+              <Avatar size={80} uri="" name={managerName} />
             </View>
 
             {[
-              { label: 'Name', value: 'Venkat.K', icon: 'person-outline' },
-              { label: 'Phone no', value: '9876543210', icon: 'call-outline' },
+              { label: 'Name', value: managerName, icon: 'person-outline' },
+              { label: 'Email', value: managerEmail, icon: 'mail-outline' },
               { label: 'Role', value: 'Manager', icon: 'briefcase-outline' },
             ].map((item) => (
               <View key={item.label} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: theme.spacing.sm, borderBottomWidth: 1, borderBottomColor: theme.colors.borderLight }}>
@@ -49,7 +71,7 @@ export default function ManagerAssignedSuccessfullyScreen() {
                   <Ionicons name={item.icon as any} size={16} color={theme.colors.textMuted} style={{ marginRight: 8 }} />
                   <Typography variant="body" color={theme.colors.textMuted}>{item.label}</Typography>
                 </View>
-                <Typography variant="bodyMedium">{item.value}</Typography>
+                <Typography variant="bodyMedium" numberOfLines={1} style={{ flex: 1, textAlign: 'right', marginLeft: theme.spacing.sm }}>{item.value}</Typography>
               </View>
             ))}
           </Card>
@@ -63,34 +85,29 @@ export default function ManagerAssignedSuccessfullyScreen() {
                   <Typography variant="caption" color={theme.colors.textMuted}>Share these details securely</Typography>
                 </View>
               </View>
-              <TouchableOpacity activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity activeOpacity={0.8} onPress={copyCredentials} style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Typography variant="caption" color={theme.colors.textMuted}>Copy</Typography>
                 <Ionicons name="copy-outline" size={16} color={theme.colors.textMuted} style={{ marginLeft: 4 }} />
               </TouchableOpacity>
             </View>
 
             {[
-              { label: 'Login ID', value: 'SVPG2026', icon: 'card-outline' },
-              { label: 'Password', value: 'Svpg@123', icon: 'key-outline' },
+              { label: 'Login ID', value: managerEmail, icon: 'card-outline' },
+              { label: 'Password', value: managerPassword, icon: 'key-outline' },
             ].map((item) => (
               <View key={item.label} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: theme.spacing.sm, borderBottomWidth: 1, borderBottomColor: theme.colors.borderLight }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name={item.icon as any} size={16} color={theme.colors.textMuted} style={{ marginRight: 8 }} />
                   <Typography variant="body" color={theme.colors.textMuted}>{item.label}</Typography>
                 </View>
-                <Typography variant="bodyMedium">{item.value}</Typography>
+                <Typography variant="bodyMedium" numberOfLines={1} style={{ flex: 1, textAlign: 'right', marginLeft: theme.spacing.sm }}>{item.value}</Typography>
               </View>
             ))}
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: theme.spacing.md }}>
-              <Ionicons name="information-circle-outline" size={14} color={theme.colors.warning} />
-              <Typography variant="caption" color={theme.colors.warning} style={{ marginLeft: 4 }}>Property Code will be your Login ID</Typography>
-            </View>
           </Card>
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <Button title="Done" variant="outline" onPress={() => router.replace('/(app)/(tabs)')} style={{ flex: 1, marginRight: theme.spacing.sm }} />
-            <Button title="Share" leftIcon={<Ionicons name="share-outline" size={18} color={theme.colors.white} />} onPress={() => {}} style={{ flex: 1, marginLeft: theme.spacing.sm }} />
+            <Button title="Share" leftIcon={<Ionicons name="share-outline" size={18} color={theme.colors.white} />} onPress={shareCredentials} style={{ flex: 1, marginLeft: theme.spacing.sm }} />
           </View>
         </View>
       </ScrollView>

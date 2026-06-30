@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { rentLedgersService } from '../../api/services';
-import type { RentLedger, Tenant } from '../../types';
+import type { RentLedger } from '../../types';
 
 const key = 'rent-ledgers';
 

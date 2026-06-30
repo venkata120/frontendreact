@@ -36,6 +36,8 @@ export const useCreateTenant = () => {
       qc.invalidateQueries({ queryKey: [key, 'pg', vars.pgId] });
       // Tenant counts in the dashboard/top cards come from the dashboard overview query
       qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['rooms'] });
+      qc.invalidateQueries({ queryKey: ['beds'] });
     },
   });
 };
@@ -58,6 +60,8 @@ export const useDeleteTenant = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [key] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['rooms'] });
+      qc.invalidateQueries({ queryKey: ['beds'] });
     },
   });
 };

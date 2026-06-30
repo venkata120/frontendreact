@@ -22,16 +22,23 @@ export default function HomeScreen() {
   const { data: properties, isLoading: propertiesLoading } = useProperties(user?.id);
 
   useEffect(() => {
-    if (properties && properties.length > 0 && !selectedPg?.name) {
+    if (!properties || properties.length === 0) return;
+    const match = selectedPg?.id ? properties.find((p) => p.id === selectedPg.id) : undefined;
+    if (match) {
+      if (!selectedPg || selectedPg.id !== match.id || selectedPg.name !== match.name) {
+        setSelectedPg(match);
+      }
+    } else if (!selectedPg) {
       setSelectedPg(properties[0]);
     }
   }, [properties, selectedPg, setSelectedPg]);
 
   const currentMonth = useMemo(() => String(new Date().getMonth() + 1).padStart(2, '0'), []);
   const currentYear = useMemo(() => String(new Date().getFullYear()), []);
+  const isOwner = user?.role === 'owner';
   const overviewParams = useMemo(
-    () => ({ month: currentMonth, year: currentYear, userId: user?.id }),
-    [currentMonth, currentYear, user?.id]
+    () => ({ month: currentMonth, year: currentYear, userId: user?.id, ownerId: isOwner ? user?.id : undefined }),
+    [currentMonth, currentYear, user?.id, isOwner]
   );
   const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useDashboardOverview(overviewParams);
   const { data: announcements, isLoading: announcementsLoading, refetch: refetchAnnouncements } = useAnnouncementsByPg(selectedPg?.id);
@@ -51,14 +58,18 @@ export default function HomeScreen() {
   );
 
   const pgSummary = useMemo(
-    () => overview?.pgSummaries.find((p) => p.pgId === selectedPg?.id) || overview?.pgSummaries[0],
+    () => overview?.pgSummaries.find((p) => p.pgId === selectedPg?.id),
     [overview, selectedPg]
+  );
+  const leftTenants = useMemo(
+    () => Math.max(0, (pgSummary?.totalTenants ?? 0) - (pgSummary?.activeTenants ?? 0)),
+    [pgSummary]
   );
 
   const OVERVIEW_ITEMS = [
     {
       label: 'Total Rooms',
-      value: String(pgSummary?.totalRooms ?? overview?.totalPgCount ?? 0),
+      value: String(pgSummary?.totalRooms ?? 0),
       icon: 'bed-outline',
       color: theme.colors.secondary,
       bg: theme.colors.primarySurface,
@@ -82,7 +93,7 @@ export default function HomeScreen() {
     },
     {
       label: 'Left Tenants',
-      value: String(pgSummary?.leftTenants ?? 0),
+      value: String(leftTenants),
       icon: 'person-remove',
       color: theme.colors.textTertiary,
       bg: theme.colors.backgroundSecondary,
@@ -256,10 +267,10 @@ export default function HomeScreen() {
                       <Ionicons name={item.icon as any} size={24} color={item.color} />
                     </View>
                     <View style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
-                      <Typography variant="caption" color={theme.colors.textMuted}>
+                      <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1}>
                         {item.label}
                       </Typography>
-                      <Typography variant="title2" color={item.color}>
+                      <Typography variant="title2" color={item.color} numberOfLines={1}>
                         {item.value}
                       </Typography>
                     </View>
@@ -314,11 +325,11 @@ export default function HomeScreen() {
                 justifyContent: 'center',
                 paddingVertical: 10,
                 borderRadius: theme.radius.full,
-                backgroundColor: activeTab === 'notices' ? theme.colors.white : 'transparent',
+                backgroundColor: activeTab === 'notices' ? theme.colors.success : 'transparent',
               }}
             >
-              <Ionicons name="newspaper-outline" size={16} color={theme.colors.success} />
-              <Typography variant="bodyMedium" color={theme.colors.success} style={{ marginLeft: 6, fontWeight: '500' }}>
+              <Ionicons name="newspaper-outline" size={16} color={activeTab === 'notices' ? theme.colors.white : theme.colors.success} />
+              <Typography variant="bodyMedium" color={activeTab === 'notices' ? theme.colors.white : theme.colors.success} style={{ marginLeft: 6, fontWeight: '500' }}>
                 Notices
               </Typography>
             </TouchableOpacity>

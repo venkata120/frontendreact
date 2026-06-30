@@ -174,6 +174,7 @@ export default function UtilityChargesScreen() {
       >
         <TouchableOpacity
           activeOpacity={0.8}
+          onPress={() => router.push('/screens/add-payment' as any)}
           style={{
             backgroundColor: UTILITY_COLOR,
             borderRadius: theme.radius.full,

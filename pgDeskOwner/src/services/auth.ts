@@ -1,7 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../api/services';
 import { setSession, clearSession, getSession } from '../api/client';
 import { Storage } from './storage';
 import type { AuthRequest, Session, UserRole, BackendUserRole } from '../types';
+
+const SELECTED_PG_KEY = '@pgdesk/selected-pg';
 
 const ROLE_KEY = '@pgdesk/role';
 
@@ -50,6 +53,7 @@ export const AuthService = {
   async logout(): Promise<void> {
     await clearSession();
     await Storage.remove(ROLE_KEY);
+    await AsyncStorage.removeItem(SELECTED_PG_KEY);
   },
 
   async getSession(): Promise<Session | null> {

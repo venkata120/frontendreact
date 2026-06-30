@@ -1,27 +1,20 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Header, Typography, Card, Avatar } from '../../src/components';
+import { ScreenWrapper, Typography } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
-
-const REQUESTS = [
-  {
-    name: 'Manager Venkat.K',
-    description: 'is requesting access to view tenant contact numbers.',
-    avatar: 'https://i.pravatar.cc/150?u=venkat',
-    date: 'Today, 10:30 AM',
-  },
-  {
-    name: 'Manager Ravi.S',
-    description: 'is requesting access to collect rent payments.',
-    avatar: 'https://i.pravatar.cc/150?u=ravi',
-    date: 'Yesterday, 4:15 PM',
-  },
-];
 
 export default function AccessRequestsScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    // Access requests are not yet supported by the backend; this keeps the pull-to-refresh gesture responsive.
+    setTimeout(() => setRefreshing(false), 500);
+  }, []);
 
   return (
     <ScreenWrapper>
@@ -53,57 +46,18 @@ export default function AccessRequestsScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ padding: theme.spacing.base }}>
-          {REQUESTS.map((request, index) => (
-            <Card key={index} shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
-                <Avatar uri={request.avatar} name={request.name} size={48} />
-                <View style={{ flex: 1, marginLeft: theme.spacing.md }}>
-                  <Typography variant="body">
-                    <Typography variant="bodyMedium">{request.name}</Typography> {request.description}
-                  </Typography>
-                  <Typography variant="caption" color={theme.colors.textMuted} style={{ marginTop: 2 }}>{request.date}</Typography>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: 10,
-                    borderRadius: theme.radius.md,
-                    backgroundColor: theme.colors.white,
-                    borderWidth: 1,
-                    borderColor: theme.colors.primary,
-                    marginRight: 4,
-                  }}
-                >
-                  <Ionicons name="close-circle" size={16} color={theme.colors.primary} />
-                  <Typography variant="bodyMedium" color={theme.colors.primary} style={{ marginLeft: 6, fontWeight: '600' }}>Reject</Typography>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: 10,
-                    borderRadius: theme.radius.md,
-                    backgroundColor: theme.colors.success,
-                    marginLeft: 4,
-                  }}
-                >
-                  <Ionicons name="checkmark-circle" size={16} color={theme.colors.white} />
-                  <Typography variant="bodyMedium" color={theme.colors.white} style={{ marginLeft: 6, fontWeight: '600' }}>Approve</Typography>
-                </TouchableOpacity>
-              </View>
-            </Card>
-          ))}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <View style={{ padding: theme.spacing.base, alignItems: 'center', paddingVertical: theme.spacing['3xl'] }}>
+          <View style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: theme.colors.primarySurface, alignItems: 'center', justifyContent: 'center', marginBottom: theme.spacing.lg }}>
+            <Ionicons name="notifications-off-outline" size={48} color={theme.colors.textMuted} />
+          </View>
+          <Typography variant="title1">No access requests</Typography>
+          <Typography variant="body" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm, textAlign: 'center' }}>
+            Manager access is currently granted directly by the owner. Pending approval requests will appear here once supported.
+          </Typography>
         </View>
       </ScrollView>
     </ScreenWrapper>

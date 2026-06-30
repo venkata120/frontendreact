@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, TouchableOpacity, Switch } from 'react-native';
-import { useState } from 'react';
+import { View, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenWrapper, Typography, Card, Button } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 
@@ -14,20 +15,55 @@ const PERMISSIONS = [
   { label: 'View financial reports', description: 'Allow manager to see finance data' },
 ];
 
+const DEFAULT_PERMISSIONS: Record<string, boolean> = {
+  'View tenant contact numbers': true,
+  'Collect rent payments': false,
+  'Add new tenants': true,
+  'Manage room allocations': false,
+  'Post notices': true,
+  'View financial reports': false,
+};
+
+const STORAGE_KEY = '@pgdesk/manager-permissions';
+
 export default function ManageAllPermissionsScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({
-    'View tenant contact numbers': true,
-    'Collect rent payments': false,
-    'Add new tenants': true,
-    'Manage room allocations': false,
-    'Post notices': true,
-    'View financial reports': false,
-  });
+  const [permissions, setPermissions] = useState<Record<string, boolean>>(DEFAULT_PERMISSIONS);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
+      if (stored) {
+        try {
+          setPermissions({ ...DEFAULT_PERMISSIONS, ...JSON.parse(stored) });
+        } catch {
+          setPermissions(DEFAULT_PERMISSIONS);
+        }
+      }
+      setLoaded(true);
+    });
+  }, []);
 
   const toggle = (label: string) => {
     setPermissions((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  const handleSave = useCallback(async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(permissions));
+    Alert.alert('Success', 'Permissions saved successfully');
+    router.back();
+  }, [permissions, router]);
+
+  const handleReset = () => {
+    Alert.alert('Reset Permissions', 'Are you sure you want to reset all permissions to default?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reset',
+        style: 'destructive',
+        onPress: () => setPermissions(DEFAULT_PERMISSIONS),
+      },
+    ]);
   };
 
   return (
@@ -41,7 +77,7 @@ export default function ManageAllPermissionsScreen() {
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, marginRight: theme.spacing.sm }}>
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)')}
@@ -57,17 +93,20 @@ export default function ManageAllPermissionsScreen() {
             >
               <Ionicons name="arrow-back" size={20} color="#0A2A5E" />
             </TouchableOpacity>
-            <Typography variant="headline2" color={theme.colors.white}>Manage All Permissions</Typography>
+            <Typography variant="headline2" color={theme.colors.white} numberOfLines={1} style={{ flexShrink: 1 }}>Manage Permissions</Typography>
           </View>
           <TouchableOpacity
             activeOpacity={0.8}
+            onPress={handleReset}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'center',
               backgroundColor: theme.colors.danger,
-              paddingHorizontal: theme.spacing.md,
+              paddingHorizontal: theme.spacing.sm,
               paddingVertical: 6,
               borderRadius: theme.radius.md,
+              minWidth: 72,
             }}
           >
             <Ionicons name="refresh" size={14} color={theme.colors.white} />
@@ -78,9 +117,12 @@ export default function ManageAllPermissionsScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ padding: theme.spacing.base }}>
+          <Typography variant="caption" color={theme.colors.textMuted} style={{ marginBottom: theme.spacing.md }}>
+            Permissions are saved on this device only. They are not enforced by the backend yet.
+          </Typography>
           <Typography variant="title1" style={{ marginBottom: theme.spacing.md }}>Manager Controlled</Typography>
 
-          {PERMISSIONS.map((permission) => (
+          {loaded && PERMISSIONS.map((permission) => (
             <Card key={permission.label} shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flex: 1, marginRight: theme.spacing.md }}>
@@ -103,7 +145,7 @@ export default function ManageAllPermissionsScreen() {
         <Button
           title="Save Changes"
           leftIcon={<Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />}
-          onPress={() => router.back()}
+          onPress={handleSave}
         />
       </View>
     </ScreenWrapper>
