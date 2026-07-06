@@ -1,76 +1,93 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput, Modal } from 'react-native';
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { ScreenWrapper, Header, Typography, Card, Input, Button } from '../../src/components';
+import { ScreenWrapper, Header, Typography, Card, Button, Input } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
 import { useCreateRoom, useCreateBed, useProperty } from '../../src/hooks/queries';
-import { regex, messages, getApiErrorMessage } from '../../src/utils/validation';
+import { getApiErrorMessage } from '../../src/utils/validation';
+
+const SHARING_OPTIONS = [
+  { key: 'single', label: 'Single', beds: 1 },
+  { key: 'double', label: 'Double', beds: 2 },
+  { key: 'triple', label: 'Triple', beds: 3 },
+  { key: 'four', label: 'Four', beds: 4 },
+  { key: 'five', label: 'Five', beds: 5 },
+  { key: 'other', label: 'Other', beds: 0 },
+];
 
 const MAX_CAPACITY = 10;
-
-function buildSchema(maxFloors?: number) {
-  return z.object({
-    roomNumber: z
-      .string()
-      .min(1, messages.required('Room Number'))
-      .max(20, 'Room number is too long'),
-    floor: z
-      .string()
-      .min(1, messages.required('Floor'))
-      .regex(regex.positiveInteger, 'Floor must be a valid number')
-      .refine((v) => {
-        const n = Number(v);
-        return n > 0 && (maxFloors === undefined || n <= maxFloors);
-      }, maxFloors !== undefined && maxFloors > 0
-        ? `Floor must be between 1 and ${maxFloors}`
-        : 'Floor must be a positive number'),
-    capacity: z
-      .string()
-      .min(1, messages.required('Total Beds / Capacity'))
-      .regex(regex.positiveInteger, 'Capacity must be a valid number')
-      .refine((v) => Number(v) > 0 && Number(v) <= MAX_CAPACITY, `Capacity must be between 1 and ${MAX_CAPACITY}`),
-  });
-}
-
-type FormData = {
-  roomNumber: string;
-  floor: string;
-  capacity: string;
-};
 
 const bedLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export default function AddRoomScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const qc = useQueryClient();
   const { selectedPgId, selectedPg } = useSelectedPg();
   const { data: property } = useProperty(selectedPgId || undefined);
+
   const createRoom = useCreateRoom();
   const createBed = useCreateBed();
-  const qc = useQueryClient();
 
   const maxFloors = property?.numberOfFloors ?? selectedPg?.numberOfFloors;
 
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(buildSchema(maxFloors)),
-  });
+  const [floor, setFloor] = useState('');
+  const [roomNumber, setRoomNumber] = useState('');
+  const [selectedSharing, setSelectedSharing] = useState<string | null>(null);
+  const [customCapacity, setCustomCapacity] = useState('');
+  const [baseRent, setBaseRent] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const onSubmit = async (data: FormData) => {
-    if (!selectedPgId) return;
+  const capacity = selectedSharing
+    ? selectedSharing === 'other'
+      ? Number(customCapacity) || 0
+      : SHARING_OPTIONS.find((s) => s.key === selectedSharing)?.beds ?? 0
+    : 0;
+
+  const validate = () => {
+    const next: Record<string, string> = {};
+    if (!roomNumber.trim()) next.roomNumber = 'Room number is required';
+    if (!floor.trim()) {
+      next.floor = 'Floor number is required';
+    } else {
+      const f = Number(floor);
+      if (Number.isNaN(f) || f < 0) next.floor = 'Enter a valid floor number';
+      if (maxFloors !== undefined && maxFloors > 0 && f > maxFloors) {
+        next.floor = `Floor must be between 0 and ${maxFloors}`;
+      }
+    }
+    if (!selectedSharing) next.sharing = 'Select room sharing';
+    if (selectedSharing === 'other' && (capacity <= 0 || capacity > MAX_CAPACITY)) {
+      next.customCapacity = `Enter beds between 1 and ${MAX_CAPACITY}`;
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const resetForm = () => {
+    setFloor('');
+    setRoomNumber('');
+    setSelectedSharing(null);
+    setCustomCapacity('');
+    setBaseRent('');
+    setErrors({});
+  };
+
+  const onSubmit = async () => {
+    if (!validate() || !selectedPgId) return;
+
     try {
       const room = await createRoom.mutateAsync({
         pgId: selectedPgId,
-        roomNumber: data.roomNumber,
-        floor: Number(data.floor),
-        capacity: Number(data.capacity),
+        roomNumber: roomNumber.trim(),
+        floor: Number(floor),
+        capacity,
       });
 
-      const capacity = Number(data.capacity);
       await Promise.all(
         Array.from({ length: capacity }).map((_, i) =>
           createBed.mutateAsync({
@@ -86,11 +103,9 @@ export default function AddRoomScreen() {
         await qc.refetchQueries({ queryKey: ['rooms', 'pg', selectedPgId, 'with-beds'] });
       }
 
-      Alert.alert('Success', 'Room added successfully', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      setShowSuccess(true);
     } catch (err: any) {
-      Alert.alert('Error', getApiErrorMessage(err, 'Failed to add room'));
+      setErrors({ submit: getApiErrorMessage(err, 'Failed to add room') });
     }
   };
 
@@ -106,22 +121,130 @@ export default function AddRoomScreen() {
                 <Typography variant="title1">Room Details</Typography>
               </View>
 
-              <Controller control={control} name="roomNumber" render={({ field }) => (
-                <Input placeholder="Room Number *" value={field.value} onChangeText={field.onChange} error={errors.roomNumber?.message} />
-              )} />
-              <Controller control={control} name="floor" render={({ field }) => (
-                <Input placeholder={`Floor *${maxFloors ? ` (1-${maxFloors})` : ''}`} keyboardType="number-pad" maxLength={2} value={field.value} onChangeText={field.onChange} error={errors.floor?.message} />
-              )} />
-              <Controller control={control} name="capacity" render={({ field }) => (
-                <Input placeholder={`Total Beds / Capacity * (1-${MAX_CAPACITY})`} keyboardType="number-pad" maxLength={2} value={field.value} onChangeText={field.onChange} error={errors.capacity?.message} />
-              )} />
+              {/* Floor number */}
+              <Input
+                label="Floor number"
+                placeholder={`Enter floor number${maxFloors ? ` (0-${maxFloors})` : ''}`}
+                keyboardType="number-pad"
+                maxLength={2}
+                value={floor}
+                onChangeText={(v) => setFloor(v.replace(/[^0-9]/g, ''))}
+                error={errors.floor}
+                leftIcon={<Ionicons name="layers-outline" size={18} color={theme.colors.textMuted} />}
+              />
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.sm }}>
+              {/* Room number */}
+              <Input
+                label="Room Number"
+                placeholder="Enter room number"
+                value={roomNumber}
+                onChangeText={setRoomNumber}
+                error={errors.roomNumber}
+                leftIcon={<Ionicons name="create-outline" size={18} color={theme.colors.textMuted} />}
+              />
+
+              {/* Room Sharing */}
+              <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
+                Room Sharing <Typography color={theme.colors.danger}>*</Typography>
+              </Typography>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: theme.spacing.md }}>
+                {SHARING_OPTIONS.map((option) => {
+                  const isSelected = selectedSharing === option.key;
+                  return (
+                    <TouchableOpacity
+                      key={option.key}
+                      activeOpacity={0.8}
+                      onPress={() => setSelectedSharing(option.key)}
+                      style={{
+                        width: '30%',
+                        alignItems: 'center',
+                        paddingVertical: theme.spacing.md,
+                        borderRadius: theme.radius.lg,
+                        backgroundColor: isSelected ? theme.colors.primarySurface : theme.colors.backgroundSecondary,
+                        borderWidth: 1.5,
+                        borderColor: isSelected ? theme.colors.primary : theme.colors.borderLight,
+                      }}
+                    >
+                      <Ionicons
+                        name="bed"
+                        size={22}
+                        color={isSelected ? theme.colors.primary : theme.colors.textMuted}
+                      />
+                      <Typography variant="bodyMedium" color={isSelected ? theme.colors.primary : theme.colors.text}>
+                        {option.label}
+                      </Typography>
+                      <Typography variant="caption" color={theme.colors.textMuted}>
+                        {option.beds || 'Custom'} Beds
+                      </Typography>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {errors.sharing && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                  {errors.sharing}
+                </Typography>
+              )}
+
+              {/* Custom capacity */}
+              {selectedSharing === 'other' && (
+                <Input
+                  label="Number of Beds"
+                  placeholder={`Enter beds (1-${MAX_CAPACITY})`}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  value={customCapacity}
+                  onChangeText={(v) => setCustomCapacity(v.replace(/[^0-9]/g, ''))}
+                  error={errors.customCapacity}
+                />
+              )}
+
+              {/* Base rent per bed */}
+              <Typography variant="bodyMedium" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                Base Rent per Bed
+              </Typography>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  height: 52,
+                  borderRadius: theme.radius.lg,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  paddingHorizontal: theme.spacing.md,
+                  borderWidth: 1,
+                  borderColor: theme.colors.borderLight,
+                }}
+              >
+                <Typography variant="bodyMedium" color={theme.colors.textMuted} style={{ marginRight: theme.spacing.sm }}>
+                  ₹
+                </Typography>
+                <TextInput
+                  value={baseRent}
+                  onChangeText={(v) => setBaseRent(v.replace(/[^0-9]/g, ''))}
+                  keyboardType="number-pad"
+                  placeholder="Enter base rent per bed"
+                  placeholderTextColor={theme.colors.placeholder}
+                  style={{
+                    flex: 1,
+                    fontFamily: theme.fontFamilies.primary,
+                    fontSize: theme.fontSizes.base,
+                    color: theme.colors.text,
+                  }}
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.md }}>
                 <Ionicons name="information-circle-outline" size={16} color={theme.colors.secondary} />
                 <Typography variant="caption" color={theme.colors.secondary} style={{ marginLeft: theme.spacing.xs }}>
-                  Beds will be created automatically (A, B, C...).
+                  You can edit or update room details later.
                 </Typography>
               </View>
+
+              {errors.submit && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.sm }}>
+                  {errors.submit}
+                </Typography>
+              )}
             </Card>
           </View>
         </ScrollView>
@@ -132,9 +255,56 @@ export default function AddRoomScreen() {
           title="Add Room"
           loading={createRoom.isPending || createBed.isPending}
           leftIcon={<Ionicons name="add-circle" size={20} color={theme.colors.white} />}
-          onPress={handleSubmit(onSubmit)}
+          onPress={onSubmit}
         />
       </View>
+
+      {/* Success modal */}
+      <Modal visible={showSuccess} transparent animationType="fade">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: theme.spacing.base }}>
+          <Card shadow="lg" padding={theme.spacing.xl} style={{ width: '100%', maxWidth: 340, alignItems: 'center' }}>
+            <View
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: theme.colors.successSurface,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: theme.spacing.md,
+              }}
+            >
+              <Ionicons name="checkmark" size={40} color={theme.colors.success} />
+            </View>
+            <Typography variant="title1" style={{ marginBottom: theme.spacing.sm }}>
+              Added
+            </Typography>
+            <Typography variant="body" color={theme.colors.textMuted} align="center" style={{ marginBottom: theme.spacing.lg }}>
+              Room added Successfully..!
+            </Typography>
+            <View style={{ flexDirection: 'row', width: '100%', gap: theme.spacing.md }}>
+              <Button
+                title="Go to Home"
+                variant="outline"
+                style={{ flex: 1 }}
+                onPress={() => {
+                  setShowSuccess(false);
+                  resetForm();
+                  router.replace('/(app)/(tabs)');
+                }}
+              />
+              <Button
+                title="Add one more"
+                style={{ flex: 1 }}
+                onPress={() => {
+                  setShowSuccess(false);
+                  resetForm();
+                }}
+              />
+            </View>
+          </Card>
+        </View>
+      </Modal>
     </ScreenWrapper>
   );
 }

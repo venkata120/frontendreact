@@ -28,6 +28,14 @@ export const useTenant = (id?: string) => {
   });
 };
 
+export const useTenantByBed = (bedId?: string) => {
+  return useQuery({
+    queryKey: [key, 'bed', bedId],
+    queryFn: () => tenantsService.getByBed(bedId!),
+    enabled: !!bedId,
+  });
+};
+
 export const useCreateTenant = () => {
   const qc = useQueryClient();
   return useMutation({

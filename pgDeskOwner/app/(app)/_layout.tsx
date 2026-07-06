@@ -43,6 +43,8 @@ export default function AppLayout() {
       <Stack.Screen name="screens/collected-amount" />
       <Stack.Screen name="screens/otp-verification" />
       <Stack.Screen name="screens/add-property" />
+      <Stack.Screen name="screens/bed-category" />
+      <Stack.Screen name="screens/bed-details" />
       <Stack.Screen name="screens/left-tenants-profile" />
       <Stack.Screen name="screens/access-requests" />
       <Stack.Screen name="screens/payments-salary-history" />
