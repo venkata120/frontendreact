@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, Avatar } from '../../src/components';
+import { ScreenWrapper, Typography, Card, ProfileImagePicker } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
@@ -76,7 +76,15 @@ export default function ManagerProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }}>
         <View style={{ paddingHorizontal: theme.spacing.base }}>
           <Card shadow="lg" padding={theme.spacing.lg} style={{ alignItems: 'center' }}>
-            <Avatar size={100} uri="" name={assignment?.managerName || 'Manager'} />
+            <ProfileImagePicker
+              size={100}
+              name={assignment?.managerName || 'Manager'}
+              profileType="MANAGER"
+              entityId={assignment?.managerId}
+              onUploaded={(result) => {
+                console.log('[ManagerProfile] uploaded', result.objectUrl);
+              }}
+            />
             <Typography variant="headline2" style={{ marginTop: theme.spacing.md }}>{assignment?.managerName || assignment?.managerEmail || 'No Manager Assigned'}</Typography>
             <Typography variant="body" color={theme.colors.textMuted}>{assignment?.managerEmail || selectedPg?.name || 'Assign a manager to manage this property'}</Typography>
 

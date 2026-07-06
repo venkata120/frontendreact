@@ -3,7 +3,7 @@ import { View, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
-import { useProperty, useDeleteProperty, useProperties } from '../../src/hooks/queries';
+import { useProperty, useDeleteProperty, useProperties, useDownloadProfileImage } from '../../src/hooks/queries';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
 
@@ -19,6 +19,14 @@ export default function PropertyDetailsScreen() {
 
   const property = propertyById || selectedPg || (properties && properties.length > 0 ? properties[0] : undefined);
   const hasProperty = !!property;
+
+  const { data: imageDownload } = useDownloadProfileImage(
+    property?.id,
+    'PG',
+    'profiles',
+    { enabled: hasProperty }
+  );
+  const propertyImageUrl = imageDownload?.presignedUrl;
 
   const handleDelete = () => {
     if (!property?.id) return;
@@ -121,7 +129,9 @@ export default function PropertyDetailsScreen() {
               <Typography variant="title1" style={{ marginBottom: theme.spacing.md, marginTop: theme.spacing.base }}>Property Image</Typography>
               <View style={{ position: 'relative', marginBottom: theme.spacing.lg }}>
                 <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800' }}
+                  source={{
+                    uri: propertyImageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
+                  }}
                   style={{ width: '100%', height: 180, borderRadius: theme.radius.lg }}
                   resizeMode="cover"
                 />

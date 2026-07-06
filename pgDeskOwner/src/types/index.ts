@@ -535,6 +535,43 @@ export interface NoticeBoardSearchResponse {
 }
 
 // ------------------------------------------------------------------
+// Profile photos
+// ------------------------------------------------------------------
+
+export type ProfileType = 'PG' | 'OWNER' | 'MANAGER' | 'TENANT' | 'STAFF';
+
+export interface ProfileImageFile {
+  uri: string;
+  name?: string;
+  type?: string;
+}
+
+export interface ProfileUploadPayload {
+  file: ProfileImageFile | File;
+  profileType: ProfileType;
+  entityId: string;
+  folder?: string;
+}
+
+export interface ProfileUploadResponse {
+  folder: string;
+  profileType: string;
+  entityId: string;
+  objectKey: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  objectUrl: string;
+}
+
+export interface ProfileDownloadResponse {
+  presignedUrl: string;
+  objectKey: string;
+  bucket: string;
+  fileFormat: string;
+}
+
+// ------------------------------------------------------------------
 // Legacy / UI-specific types (kept for screens that have no backend)
 // ------------------------------------------------------------------
 

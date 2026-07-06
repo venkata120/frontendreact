@@ -14,7 +14,6 @@ export default function AuthLayout() {
       <Stack.Screen name="login" />
       <Stack.Screen name="signup-owner" />
       <Stack.Screen name="installation-of-property" />
-      <Stack.Screen name="review-details" />
       <Stack.Screen name="otp" />
     </Stack>
   );

@@ -27,12 +27,23 @@ export const normalizeMobile = (mobile: string): string => {
 };
 
 export const getApiErrorMessage = (err: any, fallback = 'Something went wrong'): string => {
-  const raw = err?.response?.data?.message || err?.message || fallback;
-  if (typeof raw !== 'string') return fallback;
+  const message = err?.response?.data?.message || err?.message || fallback;
+  const fieldErrors = err?.response?.data?.errors;
+
+  if (typeof message !== 'string') return fallback;
 
   // Map backend "Invalid input: expected string, received undefined" to a friendly message
-  if (raw.includes('Invalid input: expected string, received undefined')) {
+  if (message.includes('Invalid input: expected string, received undefined')) {
     return 'Please fill in all required fields';
   }
-  return raw;
+
+  // Include per-field validation errors when available
+  if (fieldErrors && typeof fieldErrors === 'object') {
+    const details = Object.values(fieldErrors).filter(Boolean).join('\n');
+    if (details) {
+      return `${message}\n${details}`;
+    }
+  }
+
+  return message;
 };

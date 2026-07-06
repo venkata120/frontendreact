@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Input, Button } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
-import { useRoom, useUpdateRoom } from '../../src/hooks/queries';
+import { useRoom, useUpdateRoom, useBedsByRoom } from '../../src/hooks/queries';
 import { regex, messages, getApiErrorMessage } from '../../src/utils/validation';
 
 const MAX_CAPACITY = 10;
@@ -32,8 +32,11 @@ export default function EditRoomScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: room, isLoading } = useRoom(id);
+  const { data: beds } = useBedsByRoom(id);
   const updateRoom = useUpdateRoom();
   const [saving, setSaving] = useState(false);
+
+  const occupiedBeds = beds?.filter((b) => b.status === 'OCCUPIED').length ?? 0;
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -50,12 +53,21 @@ export default function EditRoomScreen() {
   }, [room, reset]);
 
   const onSubmit = async (data: FormData) => {
-    if (!id) return;
+    if (!id || !room) return;
+    const newCapacity = Number(data.capacity);
+    if (newCapacity < occupiedBeds) {
+      Alert.alert(
+        'Cannot update capacity',
+        `There ${occupiedBeds === 1 ? 'is' : 'are'} ${occupiedBeds} occupied bed${occupiedBeds === 1 ? '' : 's'} in this room. Capacity cannot be less than ${occupiedBeds}.`
+      );
+      return;
+    }
     setSaving(true);
     try {
       await updateRoom.mutateAsync({
         id,
         payload: {
+          pgId: room.pgId,
           roomNumber: data.roomNumber,
           floor: Number(data.floor),
           capacity: Number(data.capacity),

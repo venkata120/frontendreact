@@ -4,7 +4,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Input, Button, Card, Avatar } from '../../src/components';
+import { ScreenWrapper, Typography, Input, Button, Card, ProfileImagePicker } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useTenant, useUpdateTenant } from '../../src/hooks/queries';
 import { useEffect, useState } from 'react';
@@ -122,7 +122,17 @@ export default function EditTenantScreen() {
             </View>
 
             <View style={{ alignItems: 'center', marginBottom: theme.spacing.lg }}>
-              <Avatar size={100} uri="" name={tenant?.fullName} />
+              <ProfileImagePicker
+                size={100}
+                uri={tenant?.avatar}
+                name={tenant?.fullName}
+                profileType="TENANT"
+                entityId={tenant?.id}
+                onUploaded={(result) => {
+                  // Optionally refetch tenant or update local state with result.objectUrl
+                  console.log('[EditTenant] uploaded', result.objectUrl);
+                }}
+              />
             </View>
 
             {isLoading && <Typography variant="body" color={theme.colors.textMuted}>Loading...</Typography>}

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { propertiesService } from '../../api/services';
-import type { Property } from '../../types';
+import type { Property, ProfileImageFile } from '../../types';
 
 const key = 'properties';
 
@@ -49,5 +49,18 @@ export const useDeleteProperty = () => {
   return useMutation({
     mutationFn: (id: string) => propertiesService.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: [key] }),
+  });
+};
+
+export const useUploadPropertyImage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: ProfileImageFile | File }) =>
+      propertiesService.uploadImage(id, file),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: [key] });
+      qc.invalidateQueries({ queryKey: [key, vars.id] });
+      qc.invalidateQueries({ queryKey: ['profiles', 'download', 'profiles', 'PG', vars.id] });
+    },
   });
 };

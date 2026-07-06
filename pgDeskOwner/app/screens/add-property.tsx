@@ -1,127 +1,271 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, Modal, FlatList, Image } from 'react-native';
+import {
+  View,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
+  Image,
+  TextInput,
+} from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useEffect, useRef, useState } from 'react';
 import { ScreenWrapper, Header, Typography, Card, Input, Button } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
-import { useProperty, useCreateProperty, useUpdateProperty } from '../../src/hooks/queries';
-import { useEffect, useState } from 'react';
-import { regex, messages, getApiErrorMessage } from '../../src/utils/validation';
+import {
+  useCreateProperty,
+  useUpdateProperty,
+  useUploadPropertyImage,
+  useProperty,
+  useDownloadProfileImage,
+} from '../../src/hooks/queries';
+import { getApiErrorMessage } from '../../src/utils/validation';
+import type { Property } from '../../src/types';
 
-const MAX_CITY_LENGTH = 50;
-const MAX_FLOORS = 50;
+const SHARING_OPTIONS = [1, 2, 3, 4, 5];
 
-const schema = z.object({
-  name: z.string().min(1, messages.required('Hostel Name')).max(100, 'Hostel name is too long'),
-  pgType: z.string().min(1, messages.required('Type of Hostel')),
-  city: z
-    .string()
-    .min(1, messages.required('City'))
-    .max(MAX_CITY_LENGTH, `City must not exceed ${MAX_CITY_LENGTH} characters`)
-    .regex(regex.alphabetsOnly, 'City should contain only alphabets and spaces'),
-  address: z.string().min(1, messages.required('Hostel Address')).max(200, 'Address is too long'),
-  numberOfFloors: z
-    .string()
-    .min(1, messages.required('Number of Floors'))
-    .regex(regex.positiveInteger, 'Number of Floors must be a valid number')
-    .refine((v) => Number(v) > 0 && Number(v) <= MAX_FLOORS, `Number of Floors must be between 1 and ${MAX_FLOORS}`),
-});
+const PG_TYPE_OPTIONS: { label: string; value: 'MEN' | 'LADIES' | 'CO_LIVE' }[] = [
+  { label: 'Girls', value: 'LADIES' },
+  { label: 'Boys', value: 'MEN' },
+  { label: 'Co-Living', value: 'CO_LIVE' },
+];
+
+const schema = z
+  .object({
+    name: z.string().min(1, 'Hostel name is required').max(100, 'Hostel name is too long'),
+    pgType: z.enum(['MEN', 'LADIES', 'CO_LIVE'], { message: 'Type of hostel is required' }),
+    maxSharing: z.number().min(1, 'Select number of sharing').max(5),
+    prices: z.record(z.string(), z.string()),
+    advanceAmount: z.string().min(1, 'Advance amount is required'),
+    city: z.string().min(1, 'City is required'),
+    address: z.string().min(1, 'Hostel address is required'),
+    numberOfFloors: z
+      .string()
+      .min(1, 'Number of floors is required')
+      .regex(/^[1-9][0-9]?$/, 'Enter a valid number between 1 and 99'),
+  })
+  .superRefine((data, ctx) => {
+    SHARING_OPTIONS.forEach((n) => {
+      if (n <= data.maxSharing) {
+        const value = data.prices[String(n)];
+        if (!value || Number(value) <= 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Enter price for ${n} sharing`,
+            path: ['prices', String(n)],
+          });
+        }
+      }
+    });
+  });
 
 type FormData = z.infer<typeof schema>;
-
-const PG_TYPES = [
-  { label: 'Men', value: 'MEN' },
-  { label: 'Ladies', value: 'LADIES' },
-  { label: 'Co-Live', value: 'CO_LIVE' },
-];
 
 export default function AddPropertyScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { propertyId } = useLocalSearchParams<{ propertyId?: string }>();
+  const isEditMode = !!propertyId;
   const { user } = useAuth();
-  const { selectedPg, setSelectedPg } = useSelectedPg();
-  const { data: existing } = useProperty(id);
+  const { setSelectedPg } = useSelectedPg();
   const createProperty = useCreateProperty();
   const updateProperty = useUpdateProperty();
-  const [pgTypeModalOpen, setPgTypeModalOpen] = useState(false);
-  const [images, setImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const uploadPropertyImage = useUploadPropertyImage();
 
-  const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: { pgType: 'MEN' },
-  });
-
-  const selectedPgType = watch('pgType');
+  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [hasImageChanged, setHasImageChanged] = useState(false);
+  const imageInitialized = useRef(false);
 
   useEffect(() => {
-    if (existing) {
-      reset({
-        name: existing.name,
-        pgType: existing.pgType,
-        city: existing.city,
-        address: existing.address,
-        numberOfFloors: existing.numberOfFloors ? String(existing.numberOfFloors) : '',
-      });
-    }
-  }, [existing, reset]);
+    imageInitialized.current = false;
+    setImage(null);
+    setHasImageChanged(false);
+  }, [propertyId]);
 
-  const onSubmit = async (data: FormData) => {
-    const payload = {
+  const { data: existingProperty, isLoading: propertyLoading } = useProperty(propertyId);
+  const { data: propertyImageDownload } = useDownloadProfileImage(
+    propertyId,
+    'PG',
+    'profiles',
+    { enabled: isEditMode }
+  );
+
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      pgType: 'MEN',
+      maxSharing: 3,
+      prices: {},
+    },
+  });
+
+  const maxSharing = watch('maxSharing');
+  const prices = watch('prices');
+
+  useEffect(() => {
+    if (!existingProperty) return;
+
+    const max = SHARING_OPTIONS.reduce(
+      (acc, n) => ((existingProperty as any)[`sharing${n}`] > 0 ? n : acc),
+      0
+    );
+    const prefilledPrices: Record<string, string> = {};
+    SHARING_OPTIONS.forEach((n) => {
+      if (n <= max) {
+        const val = (existingProperty as any)[`sharing${n}`];
+        if (val) prefilledPrices[String(n)] = String(val);
+      }
+    });
+
+    reset({
+      name: existingProperty.name,
+      pgType: existingProperty.pgType,
+      maxSharing: max || 1,
+      prices: prefilledPrices,
+      advanceAmount: String(existingProperty.advanceAmount ?? ''),
+      city: existingProperty.city,
+      address: existingProperty.address,
+      numberOfFloors: String(existingProperty.numberOfFloors ?? ''),
+    });
+
+    const imageUrl = propertyImageDownload?.presignedUrl;
+    if (imageUrl && !imageInitialized.current) {
+      imageInitialized.current = true;
+      setImage({
+        uri: imageUrl,
+        fileName: 'property.jpg',
+        mimeType: 'image/jpeg',
+      } as ImagePicker.ImagePickerAsset);
+    }
+  }, [existingProperty, propertyImageDownload?.presignedUrl, reset]);
+
+  const toggleSharing = (n: number) => {
+    setValue('maxSharing', n, { shouldValidate: true });
+  };
+
+  const updatePrice = (sharing: number, value: string) => {
+    const next = { ...prices, [String(sharing)]: value.replace(/[^0-9]/g, '') };
+    setValue('prices', next, { shouldValidate: true });
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImage(result.assets[0]);
+      setHasImageChanged(true);
+    }
+  };
+
+  const buildPayload = (data: FormData): Omit<Property, 'id' | 'createdAt' | 'updatedAt'> => {
+    const payload: Omit<Property, 'id' | 'createdAt' | 'updatedAt'> = {
       name: data.name,
       address: data.address,
       city: data.city,
-      ownerId: user?.id || existing?.ownerId || '',
-      pgType: data.pgType.toUpperCase() as 'MEN' | 'LADIES' | 'CO_LIVE',
+      ownerId: user?.id || '',
+      pgType: data.pgType,
+      advanceAmount: Number(data.advanceAmount) || 0,
       numberOfFloors: Number(data.numberOfFloors),
     };
-    try {
-      if (id) {
-        await updateProperty.mutateAsync({ id, payload });
+
+    SHARING_OPTIONS.forEach((n) => {
+      const key = `sharing${n}` as keyof typeof payload;
+      if (n <= data.maxSharing && data.prices[String(n)]) {
+        (payload as any)[key] = Number(data.prices[String(n)]);
       } else {
-        const created = await createProperty.mutateAsync(payload);
-        if (!selectedPg) setSelectedPg(created);
+        (payload as any)[key] = 0;
       }
-      if (router.canGoBack()) {
-        router.back();
+    });
+
+    return payload;
+  };
+
+  const onSubmit = async (data: FormData) => {
+    const payload = buildPayload(data);
+
+    try {
+      let targetPropertyId = propertyId;
+
+      if (isEditMode) {
+        await updateProperty.mutateAsync({ id: propertyId, payload: payload as Partial<Property> });
       } else {
+        const property = await createProperty.mutateAsync(payload);
+        setSelectedPg(property);
+        targetPropertyId = property.id;
+      }
+
+      if (image && (!isEditMode || hasImageChanged) && targetPropertyId) {
+        try {
+          await uploadPropertyImage.mutateAsync({
+            id: targetPropertyId,
+            file: {
+              uri: image.uri,
+              name: image.fileName || 'property.jpg',
+              type: image.mimeType || 'image/jpeg',
+            },
+          });
+        } catch (uploadErr) {
+          console.warn('Property image upload failed, continuing without image:', uploadErr);
+        }
+      }
+
+      if (isEditMode) {
         router.replace('/(app)/(tabs)');
+      } else {
+        router.replace({
+          pathname: '/screens/add-property',
+          params: { propertyId: targetPropertyId },
+        });
       }
     } catch {
       // error surfaced by mutation
     }
   };
 
-  const pickImages = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets) {
-      setImages((prev) => [...prev, ...result.assets]);
-    }
-  };
+  const isPending =
+    createProperty.isPending || updateProperty.isPending || uploadPropertyImage.isPending;
+  const error =
+    (createProperty.error as any) || (updateProperty.error as any) || (uploadPropertyImage.error as any);
 
-  const isPending = createProperty.isPending || updateProperty.isPending;
-  const error = (createProperty.error as any) || (updateProperty.error as any);
+  if (isEditMode && propertyLoading) {
+    return (
+      <ScreenWrapper>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Typography variant="body" color={theme.colors.textMuted}>
+            Loading property details...
+          </Typography>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   return (
     <ScreenWrapper>
       <Header
-        title={id ? 'Edit Property' : 'Add Property'}
-        subtitle="Please provide property details"
-        onBack={() => router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)')}
-        backgroundColor={theme.colors.secondary}
+        title={isEditMode ? 'Edit Property' : 'Add Property'}
+        subtitle={isEditMode ? 'Update property details' : 'Please provide property details'}
+        onBack={() =>
+          router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)')
+        }
+        backgroundColor={theme.colors.primary}
         textColor={theme.colors.white}
       />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -132,133 +276,292 @@ export default function AddPropertyScreen() {
             </Typography>
 
             <Card shadow="lg" padding={theme.spacing.lg}>
-              <Controller control={control} name="name" render={({ field }) => (
-                <Input label="Hostel Name *" placeholder="Enter hostel name" value={field.value} onChangeText={field.onChange} error={errors.name?.message} />
-              )} />
-              <Controller control={control} name="pgType" render={({ field }) => (
-                <View>
-                  <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>Type of Hostel *</Typography>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => setPgTypeModalOpen(true)}
+              {/* Hostel Name */}
+              <Controller
+                control={control}
+                name="name"
+                render={({ field }) => (
+                  <Input
+                    label="Hostel Name"
+                    placeholder="Enter hostel name"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={errors.name?.message}
+                  />
+                )}
+              />
+
+              {/* Type of Hostel */}
+              <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
+                Type of Hostel
+              </Typography>
+              <Controller
+                control={control}
+                name="pgType"
+                render={({ field }) => (
+                  <View style={{ flexDirection: 'row', marginBottom: theme.spacing.base }}>
+                    {PG_TYPE_OPTIONS.map((option, index) => {
+                      const isSelected = field.value === option.value;
+                      return (
+                        <TouchableOpacity
+                          key={option.value}
+                          activeOpacity={0.8}
+                          onPress={() => field.onChange(option.value)}
+                          style={{
+                            flex: 1,
+                            height: 44,
+                            marginRight: index < PG_TYPE_OPTIONS.length - 1 ? theme.spacing.sm : 0,
+                            borderRadius: theme.radius.full,
+                            backgroundColor: isSelected ? theme.colors.primary : theme.colors.backgroundSecondary,
+                            borderWidth: 1,
+                            borderColor: isSelected ? theme.colors.primary : theme.colors.borderLight,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Typography
+                            variant="bodyMedium"
+                            color={isSelected ? theme.colors.white : theme.colors.text}
+                          >
+                            {option.label}
+                          </Typography>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              />
+              {errors.pgType && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                  {errors.pgType.message}
+                </Typography>
+              )}
+
+              {/* Number of Sharing */}
+              <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
+                Number of Sharing
+              </Typography>
+              <Controller
+                control={control}
+                name="maxSharing"
+                render={() => (
+                  <View style={{ flexDirection: 'row', marginBottom: theme.spacing.base }}>
+                    {SHARING_OPTIONS.map((n) => {
+                      const isSelected = n <= maxSharing;
+                      return (
+                        <TouchableOpacity
+                          key={n}
+                          activeOpacity={0.8}
+                          onPress={() => toggleSharing(n)}
+                          style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: theme.radius.lg,
+                            backgroundColor: isSelected ? theme.colors.primary : theme.colors.white,
+                            borderWidth: 1,
+                            borderColor: isSelected ? theme.colors.primary : theme.colors.borderLight,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginRight: theme.spacing.sm,
+                          }}
+                        >
+                          <Typography variant="bodyMedium" color={isSelected ? theme.colors.white : theme.colors.text}>
+                            {n}
+                          </Typography>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              />
+
+              {/* Price details */}
+              <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
+                Enter price details
+              </Typography>
+              {SHARING_OPTIONS.filter((n) => n <= maxSharing).map((n) => (
+                <View
+                  key={n}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    height: 52,
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    paddingHorizontal: theme.spacing.md,
+                    marginBottom: theme.spacing.sm,
+                  }}
+                >
+                  <Typography variant="bodyMedium" style={{ width: 80 }}>
+                    {n} Sharing
+                  </Typography>
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+                    <Typography variant="bodyMedium" color={theme.colors.textMuted}>
+                      ₹
+                    </Typography>
+                    <TextInput
+                      value={prices[String(n)] || ''}
+                      onChangeText={(v) => updatePrice(n, v)}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      placeholder="00000"
+                      placeholderTextColor={theme.colors.placeholder}
+                      style={{
+                        minWidth: 70,
+                        fontFamily: theme.fontFamilies.primary,
+                        fontSize: theme.fontSizes.base,
+                        color: theme.colors.text,
+                        marginHorizontal: theme.spacing.xs,
+                        textAlign: 'right',
+                      }}
+                    />
+                    <Typography variant="caption" color={theme.colors.textMuted} style={{ marginRight: theme.spacing.md }}>
+                      /month
+                    </Typography>
+                    <TouchableOpacity activeOpacity={0.8} onPress={() => { /* keep field editable */ }}>
+                      <Typography variant="bodyMedium" color={theme.colors.primary}>
+                        Edit
+                      </Typography>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+              {errors.prices && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginBottom: theme.spacing.sm }}>
+                  Please enter prices for all selected sharing options
+                </Typography>
+              )}
+
+              {/* Advance Amount */}
+              <Typography variant="bodyMedium" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                Advance Amount
+              </Typography>
+              <Controller
+                control={control}
+                name="advanceAmount"
+                render={({ field }) => (
+                  <View
                     style={{
-                      minHeight: 52,
                       flexDirection: 'row',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingHorizontal: theme.spacing.md,
+                      height: 52,
                       borderRadius: theme.radius.lg,
                       backgroundColor: theme.colors.backgroundSecondary,
+                      paddingHorizontal: theme.spacing.md,
                       borderWidth: 1,
-                      borderColor: errors.pgType ? theme.colors.danger : theme.colors.borderLight,
-                      marginBottom: theme.spacing.base,
+                      borderColor: errors.advanceAmount ? theme.colors.danger : theme.colors.borderLight,
                     }}
                   >
-                    <Typography variant="bodyMedium" color={selectedPgType ? theme.colors.text : theme.colors.placeholder}>
-                      {PG_TYPES.find((t) => t.value === selectedPgType)?.label || 'Select type of hostel'}
+                    <Typography variant="bodyMedium" color={theme.colors.textMuted} style={{ marginRight: theme.spacing.sm }}>
+                      ₹
                     </Typography>
-                    <Ionicons name="chevron-down" size={18} color={theme.colors.textMuted} />
-                  </TouchableOpacity>
-                  {errors.pgType?.message && (
-                    <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
-                      {errors.pgType.message}
-                    </Typography>
-                  )}
-                </View>
-              )} />
-              <Controller control={control} name="city" render={({ field }) => (
-                <Input label="City *" placeholder="Enter city" maxLength={MAX_CITY_LENGTH} value={field.value} onChangeText={field.onChange} error={errors.city?.message} />
-              )} />
-              <Controller control={control} name="address" render={({ field }) => (
-                <Input label="Hostel Address *" placeholder="Enter hostel address" multiline numberOfLines={3} inputStyle={{ height: 80, textAlignVertical: 'top' }} value={field.value} onChangeText={field.onChange} error={errors.address?.message} />
-              )} />
-              <Controller control={control} name="numberOfFloors" render={({ field }) => (
-                <Input label="Number of Floors *" placeholder="Enter number of floors" keyboardType="number-pad" maxLength={2} value={field.value} onChangeText={field.onChange} error={errors.numberOfFloors?.message} />
-              )} />
-              <Typography variant="bodyMedium" style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.sm }}>
-                Upload Hostel images
-              </Typography>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={pickImages}
-                style={{
-                  borderWidth: 1,
-                  borderStyle: 'dashed',
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.radius.md,
-                  padding: theme.spacing.lg,
-                  alignItems: 'center',
-                  backgroundColor: theme.colors.backgroundSecondary,
-                }}
-              >
-                <Ionicons name="cloud-upload-outline" size={32} color={theme.colors.primary} />
-                <Typography variant="caption" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm }}>
-                  Tap to upload images
+                    <TextInput
+                      value={field.value}
+                      onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))}
+                      keyboardType="number-pad"
+                      maxLength={8}
+                      placeholder="Enter advance amount"
+                      placeholderTextColor={theme.colors.placeholder}
+                      style={{
+                        flex: 1,
+                        fontFamily: theme.fontFamilies.primary,
+                        fontSize: theme.fontSizes.base,
+                        color: theme.colors.text,
+                      }}
+                    />
+                  </View>
+                )}
+              />
+              {errors.advanceAmount && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.xs }}>
+                  {errors.advanceAmount.message}
                 </Typography>
-              </TouchableOpacity>
+              )}
 
-              {images.length > 0 && (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: theme.spacing.md }}>
-                  {images.map((img, idx) => (
-                    <View key={idx} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
-                      <Image source={{ uri: img.uri }} style={{ width: 64, height: 64, borderRadius: theme.radius.md }} />
-                    </View>
-                  ))}
-                </View>
+              {/* Extra required fields */}
+              <View style={{ marginTop: theme.spacing.lg }}>
+                <Controller
+                  control={control}
+                  name="city"
+                  render={({ field }) => (
+                    <Input label="City" placeholder="Enter city" value={field.value} onChangeText={field.onChange} error={errors.city?.message} />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="address"
+                  render={({ field }) => (
+                    <Input
+                      label="Hostel Address"
+                      placeholder="Enter hostel address"
+                      multiline
+                      numberOfLines={3}
+                      value={field.value}
+                      onChangeText={field.onChange}
+                      error={errors.address?.message}
+                      inputStyle={{ height: 80, textAlignVertical: 'top' }}
+                    />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="numberOfFloors"
+                  render={({ field }) => (
+                    <Input
+                      label="Number of Floors"
+                      placeholder="Enter number of floors"
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      value={field.value}
+                      onChangeText={field.onChange}
+                      error={errors.numberOfFloors?.message}
+                    />
+                  )}
+                />
+
+                <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
+                  Upload Hostel Image
+                </Typography>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={pickImage}
+                  style={{
+                    borderWidth: 1,
+                    borderStyle: 'dashed',
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radius.md,
+                    padding: theme.spacing.lg,
+                    alignItems: 'center',
+                    backgroundColor: theme.colors.backgroundSecondary,
+                  }}
+                >
+                  {image ? (
+                    <Image source={{ uri: image.uri }} style={{ width: 120, height: 80, borderRadius: theme.radius.md }} />
+                  ) : (
+                    <>
+                      <Ionicons name="cloud-upload-outline" size={32} color={theme.colors.primary} />
+                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm }}>
+                        Tap to upload image
+                      </Typography>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {error && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.sm }}>
+                  {getApiErrorMessage(error, isEditMode ? 'Failed to update property' : 'Failed to save property')}
+                </Typography>
               )}
             </Card>
-
-            {error && (
-              <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.sm }}>
-                {getApiErrorMessage(error, 'Failed to save property')}
-              </Typography>
-            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
       <View style={{ padding: theme.spacing.base }}>
-        <Button
-          title={id ? 'Save Changes' : 'Add Property'}
-          loading={isPending}
-          leftIcon={<Ionicons name={id ? 'checkmark-circle' : 'add-circle'} size={20} color={theme.colors.white} />}
-          onPress={handleSubmit(onSubmit)}
-        />
+        <Button title={isEditMode ? 'Save Changes' : 'Next'} loading={isPending} onPress={handleSubmit(onSubmit)} />
       </View>
-
-      <Modal visible={pgTypeModalOpen} transparent animationType="slide" onRequestClose={() => setPgTypeModalOpen(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }}>
-          <View style={{ backgroundColor: theme.colors.white, borderTopLeftRadius: theme.radius.xl, borderTopRightRadius: theme.radius.xl, paddingBottom: 24 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.base, borderBottomWidth: 1, borderBottomColor: theme.colors.borderLight }}>
-              <Typography variant="title1">Select Type of Hostel</Typography>
-              <TouchableOpacity onPress={() => setPgTypeModalOpen(false)}>
-                <Ionicons name="close" size={24} color={theme.colors.text} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={PG_TYPES}
-              keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    setValue('pgType', item.value, { shouldValidate: true });
-                    setPgTypeModalOpen(false);
-                  }}
-                  style={{
-                    padding: theme.spacing.base,
-                    borderBottomWidth: 1,
-                    borderBottomColor: theme.colors.borderLight,
-                    backgroundColor: item.value === selectedPgType ? theme.colors.primarySurface : theme.colors.white,
-                  }}
-                >
-                  <Typography variant="bodyMedium" color={item.value === selectedPgType ? theme.colors.primary : theme.colors.text}>{item.label}</Typography>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
     </ScreenWrapper>
   );
 }

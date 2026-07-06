@@ -55,8 +55,8 @@ export default function InstallationOfPropertyScreen() {
         numberOfFloors: Number(data.floors) || undefined,
       });
       setSelectedPg(property);
-      router.push({
-        pathname: '/(auth)/review-details',
+      router.replace({
+        pathname: '/screens/add-property',
         params: { propertyId: property.id },
       });
     } catch {

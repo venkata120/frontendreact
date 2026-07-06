@@ -14,3 +14,4 @@ export { StepIndicator } from './StepIndicator/StepIndicator';
 export { PgSelector } from './PgSelector/PgSelector';
 export { DatePicker } from './DatePicker/DatePicker';
 export { DaySelector, getRepeatLabel } from './DaySelector/DaySelector';
+export { ProfileImagePicker } from './ProfileImagePicker/ProfileImagePicker';

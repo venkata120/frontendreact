@@ -5,6 +5,7 @@ import { Typography, Avatar } from '../';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
 import { useSelectedPg } from '../../context/SelectedPgContext';
+import { useProperties } from '../../hooks/queries';
 
 interface Props {
   onClose?: () => void;
@@ -38,11 +39,7 @@ export const SideBarContent: React.FC<Props> = ({ onClose }) => {
       onClose?.();
       return;
     }
-    if (item.label === 'My Property' && selectedPg?.id) {
-      router.push({ pathname: '/screens/property-details' as any, params: { id: selectedPg.id } });
-    } else {
-      router.push(item.route as any);
-    }
+    router.push(item.route as any);
     onClose?.();
   };
 
@@ -53,6 +50,16 @@ export const SideBarContent: React.FC<Props> = ({ onClose }) => {
       // ignore
     }
     onClose?.();
+  };
+
+  const { data: properties } = useProperties(user?.id);
+  const handleMyProperty = () => {
+    const pgId = selectedPg?.id || properties?.[0]?.id;
+    if (!pgId) return;
+    onClose?.();
+    setTimeout(() => {
+      router.navigate({ pathname: '/screens/add-property', params: { propertyId: pgId } } as any);
+    }, 300);
   };
 
   const ownerMenu: MenuSection[] = [
@@ -67,7 +74,7 @@ export const SideBarContent: React.FC<Props> = ({ onClose }) => {
       title: 'Account',
       items: [
         { label: 'Manager', icon: 'person', route: '/screens/manager-profile' },
-        { label: 'My Property', icon: 'business', route: '/screens/property-details' },
+        { label: 'My Property', icon: 'business', onPress: handleMyProperty },
         { label: 'Wallet', icon: 'wallet' },
         { label: 'Notifications', icon: 'notifications', route: '/screens/notifications' },
       ],
@@ -79,7 +86,7 @@ export const SideBarContent: React.FC<Props> = ({ onClose }) => {
       title: 'Account',
       items: [
         { label: 'Profile', icon: 'person', route: '/screens/manager-profile' },
-        { label: 'My Property', icon: 'business', route: '/screens/property-details' },
+        { label: 'My Property', icon: 'business', onPress: handleMyProperty },
         { label: 'Notifications', icon: 'notifications', route: '/screens/notifications' },
       ],
     },

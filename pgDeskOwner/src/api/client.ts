@@ -90,15 +90,22 @@ function logNetworkError(err: AxiosError, context: string) {
   const code = (err as any).code || err.name || 'NO_CODE';
   const message = err.message || 'Unknown error';
   const status = err.response?.status;
-  const backendMessage = (err.response?.data as any)?.message;
+  const backendData = (err.response?.data as any) || {};
+  const backendMessage = backendData?.message;
+  const backendErrors = backendData?.errors;
+  const errorDetails = backendErrors && typeof backendErrors === 'object'
+    ? Object.entries(backendErrors)
+        .map(([field, detail]) => `    ${field}: ${detail}`)
+        .join('\n')
+    : null;
 
-   
   console.error(
     `[API] ${context} failed\n` +
       `  URL: ${method} ${url}\n` +
       `  Code: ${code}\n` +
       (status ? `  HTTP Status: ${status}\n` : '') +
       (backendMessage ? `  Backend Message: ${backendMessage}\n` : '') +
+      (errorDetails ? `  Details:\n${errorDetails}\n` : '') +
       `  Message: ${message}\n` +
       `  Base URL: ${API_URL}\n` +
       `  Platform: ${Platform.OS}\n` +

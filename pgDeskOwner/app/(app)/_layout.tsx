@@ -31,6 +31,7 @@ export default function AppLayout() {
       <Stack.Screen name="screens/owner-login" />
       <Stack.Screen name="screens/splash-screen-3" />
       <Stack.Screen name="screens/property-details" />
+      <Stack.Screen name="screens/review-details" />
       <Stack.Screen name="screens/manager-login" />
       <Stack.Screen name="screens/splash-screen-8" />
       <Stack.Screen name="screens/splash-screen-5" />

@@ -16,3 +16,4 @@ export * from './expenses';
 export * from './expenseMasters';
 export * from './notices';
 export * from './foodMenus';
+export * from './profile';

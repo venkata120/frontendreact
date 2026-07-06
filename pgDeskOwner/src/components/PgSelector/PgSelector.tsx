@@ -31,10 +31,12 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
     if (!properties || properties.length === 0) return;
     const match = selectedPg?.id ? properties.find((p) => p.id === selectedPg.id) : undefined;
     if (match) {
-      if (!selectedPg || selectedPg.id !== match.id || selectedPg.name !== match.name) {
+      // Refresh stored data (e.g. name changed) while keeping selection
+      if (selectedPg?.id !== match.id || selectedPg?.name !== match.name) {
         setSelectedPg(match);
       }
-    } else if (!selectedPg) {
+    } else {
+      // Current selection is not in the user's property list (role switch / logout / unassignment)
       setSelectedPg(properties[0]);
     }
   }, [properties, selectedPg, setSelectedPg]);

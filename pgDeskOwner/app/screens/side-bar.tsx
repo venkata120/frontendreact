@@ -6,6 +6,7 @@ import { ScreenWrapper, Typography, Avatar } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
+import { useProperties } from '../../src/hooks/queries';
 
 export default function SideBarScreen() {
   const theme = useTheme();
@@ -13,6 +14,13 @@ export default function SideBarScreen() {
   const qc = useQueryClient();
   const { user, signOut } = useAuth();
   const { selectedPg } = useSelectedPg();
+
+  const { data: properties } = useProperties(user?.id);
+  const handleMyProperty = () => {
+    const pgId = selectedPg?.id || properties?.[0]?.id;
+    if (!pgId) return;
+    router.navigate({ pathname: '/screens/add-property', params: { propertyId: pgId } } as any);
+  };
 
   const MENU = [
     {
@@ -27,7 +35,7 @@ export default function SideBarScreen() {
       items: [
         { label: 'Profile', icon: 'person', route: '/(app)/profile' },
         { label: 'Manager', icon: 'person', route: '/(app)/screens/manager-profile' },
-        { label: 'My Property', icon: 'business', route: '/(app)/screens/property-details' },
+        { label: 'My Property', icon: 'business', onPress: handleMyProperty },
         { label: 'Wallet', icon: 'wallet', route: '' },
         { label: 'Notifications', icon: 'notifications', route: '/(app)/screens/notifications' },
       ],
@@ -73,7 +81,13 @@ export default function SideBarScreen() {
                 <TouchableOpacity
                   key={item.label}
                   activeOpacity={0.8}
-                  onPress={() => item.route && router.push(item.route as any)}
+                  onPress={() => {
+                    if (item.onPress) {
+                      item.onPress();
+                    } else if (item.route) {
+                      router.push(item.route as any);
+                    }
+                  }}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',

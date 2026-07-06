@@ -9,7 +9,7 @@ import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
 import { useSelectedPg } from '../../../src/context/SelectedPgContext';
-import { useProperties, useDashboardOverview, useAnnouncementsByPg, useFoodMenusByProperty, useDeleteFoodMenu } from '../../../src/hooks/queries';
+import { useProperties, useDashboardOverview, useAnnouncementsByPg, useFoodMenusByProperty, useDeleteFoodMenu, useDownloadProfileImage } from '../../../src/hooks/queries';
 import type { Property, FoodMenu } from '../../../src/types';
 
 export default function HomeScreen() {
@@ -44,6 +44,14 @@ export default function HomeScreen() {
   const { data: announcements, isLoading: announcementsLoading, refetch: refetchAnnouncements } = useAnnouncementsByPg(selectedPg?.id);
   const { data: foodMenus, isLoading: foodMenusLoading, refetch: refetchFoodMenus } = useFoodMenusByProperty(selectedPg?.id);
   const deleteMenu = useDeleteFoodMenu();
+
+  const { data: pgImageDownload } = useDownloadProfileImage(
+    selectedPg?.id,
+    'PG',
+    'profiles',
+    { enabled: !!selectedPg?.id }
+  );
+  const pgImageUrl = pgImageDownload?.presignedUrl;
 
   useFocusEffect(
     useCallback(() => {
@@ -149,7 +157,9 @@ export default function HomeScreen() {
         {/* Header image with overlay controls */}
         <View style={{ position: 'relative' }}>
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800' }}
+            source={{
+              uri: pgImageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
+            }}
             style={{ width: '100%', height: 210 }}
             resizeMode="cover"
           />

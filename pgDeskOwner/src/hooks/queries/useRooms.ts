@@ -53,9 +53,16 @@ export const useUpdateRoom = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Partial<Room> }) => roomsService.update(id, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [roomsKey] });
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: [roomsKey], refetchType: 'all' });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
+      if (vars.payload.pgId) {
+        qc.invalidateQueries({ queryKey: [roomsKey, 'pg', vars.payload.pgId], refetchType: 'all' });
+        qc.invalidateQueries({ queryKey: [roomsKey, 'pg', vars.payload.pgId, 'with-beds'], refetchType: 'all' });
+        qc.invalidateQueries({ queryKey: [roomsKey, 'floors', vars.payload.pgId], refetchType: 'all' });
+      }
+      // Invalidate the individual room detail as well
+      qc.invalidateQueries({ queryKey: [roomsKey, vars.id], refetchType: 'all' });
     },
   });
 };

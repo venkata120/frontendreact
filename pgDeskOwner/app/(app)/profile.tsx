@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, Avatar } from '../../src/components';
+import { ScreenWrapper, Typography, Card, ProfileImagePicker } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
@@ -83,7 +83,17 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
         <View style={{ paddingHorizontal: theme.spacing.base }}>
           <Card shadow="lg" padding={theme.spacing.lg} style={{ alignItems: 'center' }}>
-            <Avatar size={90} uri="" name={user?.name || 'Owner'} />
+            <ProfileImagePicker
+              size={90}
+              uri={user?.avatar}
+              name={user?.name || 'Owner'}
+              profileType="OWNER"
+              entityId={user?.id}
+              onUploaded={(result) => {
+                // Optionally update redux / local user state with result.objectUrl
+                console.log('[Profile] uploaded', result.objectUrl);
+              }}
+            />
             <Typography variant="headline2" style={{ marginTop: theme.spacing.md }}>{user?.name || 'Owner'}</Typography>
             <Typography variant="body" color={theme.colors.textMuted}>{selectedPg?.name || 'PG Desk Owner'}</Typography>
 

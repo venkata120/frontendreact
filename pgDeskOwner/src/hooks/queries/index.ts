@@ -14,3 +14,4 @@ export * from './useRecordCollectedPayment';
 export * from './useExpenses';
 export * from './useNotices';
 export * from './useFoodMenus';
+export * from './useProfileImage';

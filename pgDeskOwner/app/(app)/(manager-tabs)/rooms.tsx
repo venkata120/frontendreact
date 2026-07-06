@@ -73,7 +73,7 @@ export default function ManagerRoomsScreen() {
       <TouchableOpacity
         key={room.id}
         activeOpacity={0.8}
-        onPress={() => router.push({ pathname: '/screens/room-details' as any, params: { roomId: room.id } })}
+        onPress={() => router.push({ pathname: '/(app)/edit-room' as any, params: { id: room.id } })}
       >
         <Card shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
