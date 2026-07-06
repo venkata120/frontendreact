@@ -116,3 +116,14 @@ export const useUpdateBedStatus = () => {
     },
   });
 };
+
+export const useDeleteBed = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => bedsService.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [bedsKey] });
+      qc.invalidateQueries({ queryKey: [roomsKey] });
+    },
+  });
+};

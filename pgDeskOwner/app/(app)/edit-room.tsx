@@ -7,21 +7,23 @@ import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Input, Button } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
-import { useRoom, useUpdateRoom, useBedsByRoom } from '../../src/hooks/queries';
-import { regex, messages, getApiErrorMessage } from '../../src/utils/validation';
+import { useRoom, useUpdateRoom, useBedsByRoom, useCreateBed, useDeleteBed } from '../../src/hooks/queries';
+import { messages, getApiErrorMessage } from '../../src/utils/validation';
 
 const MAX_CAPACITY = 10;
+const BED_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 const schema = z.object({
   roomNumber: z.string().min(1, messages.required('Room Number')).max(20, 'Room number is too long'),
   floor: z
     .string()
     .min(1, messages.required('Floor'))
-    .regex(regex.positiveInteger, 'Floor must be a valid number'),
+    .regex(/^[0-9]+$/, 'Floor must be a valid number')
+    .refine((v) => Number(v) >= 0, 'Floor must be 0 or higher'),
   capacity: z
     .string()
     .min(1, messages.required('Capacity'))
-    .regex(regex.positiveInteger, 'Capacity must be a valid number')
+    .regex(/^[1-9][0-9]?$/, 'Capacity must be a valid number')
     .refine((v) => Number(v) > 0 && Number(v) <= MAX_CAPACITY, `Capacity must be between 1 and ${MAX_CAPACITY}`),
 });
 
@@ -34,6 +36,8 @@ export default function EditRoomScreen() {
   const { data: room, isLoading } = useRoom(id);
   const { data: beds } = useBedsByRoom(id);
   const updateRoom = useUpdateRoom();
+  const createBed = useCreateBed();
+  const deleteBed = useDeleteBed();
   const [saving, setSaving] = useState(false);
 
   const occupiedBeds = beds?.filter((b) => b.status === 'OCCUPIED').length ?? 0;
@@ -46,11 +50,32 @@ export default function EditRoomScreen() {
     if (room) {
       reset({
         roomNumber: room.roomNumber,
-        floor: String(room.floor),
+        floor: String(room.floor ?? 0),
         capacity: String(room.capacity),
       });
     }
   }, [room, reset]);
+
+  const syncBeds = async (roomId: string, newCapacity: number) => {
+    if (!beds) return;
+    const currentCount = beds.length;
+
+    if (newCapacity > currentCount) {
+      const toCreate = newCapacity - currentCount;
+      await Promise.all(
+        Array.from({ length: toCreate }).map((_, i) =>
+          createBed.mutateAsync({
+            roomId,
+            bedNumber: BED_LETTERS[currentCount + i] || String(currentCount + i + 1),
+            status: 'VACANT',
+          })
+        )
+      );
+    } else if (newCapacity < currentCount) {
+      const excess = beds.slice(newCapacity).filter((b) => b.status === 'VACANT');
+      await Promise.all(excess.map((b) => deleteBed.mutateAsync(b.id)));
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     if (!id || !room) return;
@@ -70,9 +95,10 @@ export default function EditRoomScreen() {
           pgId: room.pgId,
           roomNumber: data.roomNumber,
           floor: Number(data.floor),
-          capacity: Number(data.capacity),
+          capacity: newCapacity,
         },
       });
+      await syncBeds(id, newCapacity);
       Alert.alert('Success', 'Room updated successfully', [
         { text: 'OK', onPress: () => router.back() },
       ]);
@@ -134,7 +160,7 @@ export default function EditRoomScreen() {
       <View style={{ padding: theme.spacing.base }}>
         <Button
           title="Save Changes"
-          loading={saving || updateRoom.isPending}
+          loading={saving || updateRoom.isPending || createBed.isPending || deleteBed.isPending}
           leftIcon={<Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />}
           onPress={handleSubmit(onSubmit)}
         />

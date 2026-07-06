@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Avatar, PgSelector } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
 import { useSelectedPg } from '../../../src/context/SelectedPgContext';
-import { useRoomsWithBeds, useFloorsByPg, useDownloadProfileImage } from '../../../src/hooks/queries';
+import { useRoomsWithBeds, useFloorsByPg, useDownloadProfileImage, useDeleteRoom } from '../../../src/hooks/queries';
 import type { Room, Bed } from '../../../src/types';
 
 const HEADER_PLACEHOLDER = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800';
@@ -32,6 +32,7 @@ export default function RoomsScreen() {
   const { user } = useAuth();
   const { openDrawer } = useDrawer();
   const { selectedPg } = useSelectedPg();
+  const deleteRoom = useDeleteRoom();
 
   const { data: roomsWithBeds, isLoading } = useRoomsWithBeds(selectedPg?.id);
   const { data: floors } = useFloorsByPg(selectedPg?.id);
@@ -289,11 +290,53 @@ export default function RoomsScreen() {
                     const total = beds.length || room.capacity;
                     return (
                       <Card key={room.id} shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.sm }}>
-                          <Typography variant="title2">Room {room.roomNumber}</Typography>
-                          <Typography variant="caption" color={theme.colors.textMuted}>
-                            {occupied}/{total}
-                          </Typography>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: theme.spacing.sm }}>
+                          <View style={{ flex: 1, paddingRight: theme.spacing.sm }}>
+                            <Typography variant="title2">Room {room.roomNumber}</Typography>
+                            <Typography variant="caption" color={theme.colors.textMuted}>
+                              {occupied}/{total} beds occupied
+                            </Typography>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={() => router.push({ pathname: '/(app)/edit-room' as any, params: { id: room.id } })}
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 16,
+                                backgroundColor: theme.colors.successSurface,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: theme.spacing.sm,
+                              }}
+                            >
+                              <Ionicons name="create-outline" size={16} color={theme.colors.success} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={() => {
+                                Alert.alert(
+                                  'Delete Room',
+                                  'Are you sure you want to delete this room?',
+                                  [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    { text: 'Delete', style: 'destructive', onPress: () => deleteRoom.mutate(room.id) },
+                                  ]
+                                );
+                              }}
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 16,
+                                backgroundColor: theme.colors.dangerSurface,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
+                            </TouchableOpacity>
+                          </View>
                         </View>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                           {beds.map((bed) => {
