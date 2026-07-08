@@ -6,6 +6,7 @@ import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { store, persistor } from '../../redux/store';
 import { ThemeProvider } from './ThemeProvider';
+import { TenantProvider } from '../../context/TenantContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,7 +28,9 @@ export const AppProviders: React.FC<Props> = ({ children }) => {
         <SafeAreaProvider>
           <ThemeProvider>
             <PaperProvider theme={MD3LightTheme}>
-              <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+              <QueryClientProvider client={queryClient}>
+                <TenantProvider>{children}</TenantProvider>
+              </QueryClientProvider>
             </PaperProvider>
           </ThemeProvider>
         </SafeAreaProvider>

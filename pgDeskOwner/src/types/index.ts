@@ -193,6 +193,7 @@ export interface Tenant {
   roomNumber?: string;
   floor?: number;
   bedNumber?: string;
+  avatar?: string;
   createdAt?: string;
   updatedAt?: string;
 }

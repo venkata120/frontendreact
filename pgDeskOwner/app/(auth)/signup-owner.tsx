@@ -90,37 +90,35 @@ export default function SignupOwnerScreen() {
 
   return (
     <ScreenWrapper avoidKeyboard backgroundColor="#8FA3B8">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <View style={{ flex: 1 }}>
-          <View
-            style={{
-              paddingHorizontal: theme.spacing.base,
-              paddingTop: theme.spacing.lg,
-              backgroundColor: '#8FA3B8',
-              zIndex: 10,
-              elevation: 10,
-            }}
-          >
-            <TouchableOpacity onPress={() => router.back()} style={{ width: 40, height: 40, justifyContent: 'center' }}>
-              <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
-            </TouchableOpacity>
-            <StepIndicator steps={STEPS} currentStep={0} style={{ marginBottom: theme.spacing.lg, marginTop: theme.spacing.sm }} />
+      <View style={{ flex: 1 }}>
+        <View
+          style={{
+            paddingHorizontal: theme.spacing.base,
+            paddingTop: theme.spacing.lg,
+            backgroundColor: '#8FA3B8',
+          }}
+        >
+          <TouchableOpacity onPress={() => router.back()} style={{ width: 40, height: 40, justifyContent: 'center' }}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+          <StepIndicator steps={STEPS} currentStep={0} style={{ marginBottom: theme.spacing.lg, marginTop: theme.spacing.sm }} />
 
-            <View style={{ marginBottom: theme.spacing.md }}>
-              <Typography variant="headline2" color={theme.colors.white} align="center">
-                Let&apos;s set up your profile
-              </Typography>
-              <Typography variant="body" color="rgba(255,255,255,0.8)" align="center" style={{ marginTop: theme.spacing.sm }}>
-                Please provide basic details
-              </Typography>
-            </View>
-
-            <Typography variant="title1" color={theme.colors.white} align="center" style={{ marginBottom: theme.spacing.lg }}>
-              Signup as OWNER
+          <View style={{ marginBottom: theme.spacing.md }}>
+            <Typography variant="headline2" color={theme.colors.white} align="center">
+              Let&apos;s set up your profile
+            </Typography>
+            <Typography variant="body" color="rgba(255,255,255,0.8)" align="center" style={{ marginTop: theme.spacing.sm }}>
+              Please provide basic details
             </Typography>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160, paddingHorizontal: theme.spacing.base }}>
+          <Typography variant="title1" color={theme.colors.white} align="center" style={{ marginBottom: theme.spacing.lg }}>
+            Signup as OWNER
+          </Typography>
+        </View>
+
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 180, paddingHorizontal: theme.spacing.base }}>
             <View
               style={{
                 backgroundColor: theme.colors.white,
@@ -140,6 +138,7 @@ export default function SignupOwnerScreen() {
                   <Input
                     label="Full Name *"
                     placeholder="Enter full name"
+                    maxLength={50}
                     value={field.value}
                     onChangeText={field.onChange}
                     error={errors.fullName?.message}
@@ -234,6 +233,7 @@ export default function SignupOwnerScreen() {
                   <Input
                     label="Location *"
                     placeholder="Enter location"
+                    maxLength={100}
                     value={field.value}
                     onChangeText={field.onChange}
                     error={errors.location?.message}
@@ -263,8 +263,8 @@ export default function SignupOwnerScreen() {
           >
             <Button title="Next" loading={loading} onPress={handleSubmit(onSubmit)} />
           </View>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
     </ScreenWrapper>
   );
 }

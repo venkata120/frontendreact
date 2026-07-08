@@ -18,7 +18,17 @@ export default function SideBarScreen() {
   const { data: properties } = useProperties(user?.id);
   const handleMyProperty = () => {
     const pgId = selectedPg?.id || properties?.[0]?.id;
-    if (!pgId) return;
+    if (!pgId) {
+      Alert.alert(
+        'No Property Found',
+        'Please create a property using the Create Property option first.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Create Property', onPress: () => router.push('/screens/add-property' as any) },
+        ]
+      );
+      return;
+    }
     router.navigate({ pathname: '/screens/add-property', params: { propertyId: pgId } } as any);
   };
 

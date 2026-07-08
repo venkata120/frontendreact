@@ -19,6 +19,7 @@ const SHARING_OPTIONS = [
 ];
 
 const MAX_CAPACITY = 10;
+const ROOM_NUMBER_MAX_LENGTH = 10;
 
 const bedLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
@@ -50,7 +51,13 @@ export default function AddRoomScreen() {
 
   const validate = () => {
     const next: Record<string, string> = {};
-    if (!roomNumber.trim()) next.roomNumber = 'Room number is required';
+    if (!roomNumber.trim()) {
+      next.roomNumber = 'Room number is required';
+    } else if (!/^[A-Za-z0-9\-/]+$/.test(roomNumber.trim())) {
+      next.roomNumber = 'Room number can only contain letters, numbers, hyphen or slash';
+    } else if (roomNumber.trim().length > ROOM_NUMBER_MAX_LENGTH) {
+      next.roomNumber = `Room number must be ${ROOM_NUMBER_MAX_LENGTH} characters or less`;
+    }
     if (!floor.trim()) {
       next.floor = 'Floor number is required';
     } else {
@@ -63,6 +70,9 @@ export default function AddRoomScreen() {
     if (!selectedSharing) next.sharing = 'Select room sharing';
     if (selectedSharing === 'other' && (capacity <= 0 || capacity > MAX_CAPACITY)) {
       next.customCapacity = `Enter beds between 1 and ${MAX_CAPACITY}`;
+    }
+    if (baseRent.trim() && !/^\d+$/.test(baseRent.trim())) {
+      next.baseRent = 'Base rent must be a valid number';
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -137,6 +147,7 @@ export default function AddRoomScreen() {
               <Input
                 label="Room Number"
                 placeholder="Enter room number"
+                maxLength={ROOM_NUMBER_MAX_LENGTH}
                 value={roomNumber}
                 onChangeText={setRoomNumber}
                 error={errors.roomNumber}
@@ -220,8 +231,12 @@ export default function AddRoomScreen() {
                 </Typography>
                 <TextInput
                   value={baseRent}
-                  onChangeText={(v) => setBaseRent(v.replace(/[^0-9]/g, ''))}
+                  onChangeText={(v) => {
+                    setBaseRent(v.replace(/[^0-9]/g, ''));
+                    if (errors.baseRent) setErrors((prev) => ({ ...prev, baseRent: '' }));
+                  }}
                   keyboardType="number-pad"
+                  maxLength={8}
                   placeholder="Enter base rent per bed"
                   placeholderTextColor={theme.colors.placeholder}
                   style={{
@@ -232,6 +247,12 @@ export default function AddRoomScreen() {
                   }}
                 />
               </View>
+
+              {errors.baseRent && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.xs }}>
+                  {errors.baseRent}
+                </Typography>
+              )}
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.md }}>
                 <Ionicons name="information-circle-outline" size={16} color={theme.colors.secondary} />

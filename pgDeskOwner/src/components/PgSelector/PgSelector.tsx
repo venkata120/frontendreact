@@ -87,6 +87,7 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
       <Modal
         animationType="slide"
         transparent
+        statusBarTranslucent
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >

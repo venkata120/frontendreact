@@ -522,7 +522,7 @@ export default function FoodMenuScreen() {
                           >
                             <Ionicons name="add" size={14} color={theme.colors.white} />
                             <Typography variant="caption" color={theme.colors.white} style={{ marginLeft: 2, fontWeight: '600' }}>
-                              Add Menu Item
+                              Add Item
                             </Typography>
                           </TouchableOpacity>
                         </View>
@@ -569,6 +569,7 @@ export default function FoodMenuScreen() {
       <Modal
         animationType="slide"
         transparent
+        statusBarTranslucent
         visible={menuModalVisible}
         onRequestClose={closeMenuModal}
       >

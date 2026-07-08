@@ -262,6 +262,7 @@ export default function HomeScreen() {
                 <Card
                   shadow="sm"
                   padding={theme.spacing.md}
+                  style={{ minHeight: 90, justifyContent: 'center' }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <View
@@ -277,7 +278,7 @@ export default function HomeScreen() {
                       <Ionicons name={item.icon as any} size={24} color={item.color} />
                     </View>
                     <View style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
-                      <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1}>
+                      <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1} ellipsizeMode="tail">
                         {item.label}
                       </Typography>
                       <Typography variant="title2" color={item.color} numberOfLines={1}>
@@ -468,7 +469,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* Property selector modal */}
-      <Modal visible={propertyModalVisible} transparent animationType="slide" onRequestClose={() => setPropertyModalVisible(false)}>
+      <Modal visible={propertyModalVisible} transparent statusBarTranslucent animationType="slide" onRequestClose={() => setPropertyModalVisible(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }}>
           <View style={{ backgroundColor: theme.colors.white, borderTopLeftRadius: theme.radius.xl, borderTopRightRadius: theme.radius.xl, paddingBottom: 24, maxHeight: '70%' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.base, borderBottomWidth: 1, borderBottomColor: theme.colors.borderLight }}>

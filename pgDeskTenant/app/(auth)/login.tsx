@@ -3,12 +3,14 @@ import { View, Image, TouchableOpacity } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Button, Input, Header } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 
 const schema = z.object({
-  phone: z.string().min(10, 'Enter a valid phone number'),
+  email: z.string().email('Enter a valid email'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -16,20 +18,20 @@ type FormData = z.infer<typeof schema>;
 export default function LoginScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { requestOTP, loading, error, resetError } = useAuth();
+  const { login, loading, error, resetError } = useAuth();
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { phone: '' },
+    defaultValues: { email: '', password: '' },
   });
 
   const onSubmit = async (data: FormData) => {
     resetError();
     try {
-      await requestOTP(data.phone, 'tenant');
-      router.push({ pathname: '/(auth)/otp', params: { phone: data.phone } });
-    } catch (e) {
-      // handled
+      await login(data.email, data.password, 'tenant');
+      router.replace('/(app)/(tabs)');
+    } catch {
+      // error handled by auth slice
     }
   };
 
@@ -38,7 +40,7 @@ export default function LoginScreen() {
       <Header onBack={() => router.back()} />
       <View style={{ flex: 1, paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg }}>
         <Typography variant="headline2" align="center">
-          Welcome Back!
+          Welcome back Tenant!
         </Typography>
         <Typography variant="body" align="center" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm }}>
           Login to your tenant account
@@ -54,17 +56,34 @@ export default function LoginScreen() {
 
         <Controller
           control={control}
-          name="phone"
+          name="email"
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
-              placeholder="Enter your phone number"
-              keyboardType="phone-pad"
-              maxLength={15}
+              placeholder="Enter your email"
+              keyboardType="email-address"
+              autoCapitalize="none"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
-              error={errors.phone?.message}
-              leftIcon="call-outline"
+              error={errors.email?.message}
+              leftIcon={<Ionicons name="mail-outline" size={20} color={theme.colors.textMuted} />}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="password"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input
+              placeholder="Enter your password"
+              secureTextEntry
+              value={value}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              error={errors.password?.message}
+              leftIcon={<Ionicons name="lock-closed-outline" size={20} color={theme.colors.textMuted} />}
+              containerStyle={{ marginTop: theme.spacing.sm }}
             />
           )}
         />
@@ -76,18 +95,11 @@ export default function LoginScreen() {
         )}
 
         <Button
-          title="Send OTP"
+          title="Login"
           loading={loading}
           onPress={handleSubmit(onSubmit)}
           style={{ marginTop: theme.spacing.lg }}
         />
-
-        <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.xl }}>
-          <Typography variant="body" color={theme.colors.textMuted}>New tenant? </Typography>
-          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-            <Typography variant="bodyMedium" color={theme.colors.primary}>Sign Up</Typography>
-          </TouchableOpacity>
-        </View>
       </View>
     </ScreenWrapper>
   );

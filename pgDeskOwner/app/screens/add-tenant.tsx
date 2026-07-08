@@ -1,43 +1,43 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, TouchableOpacity, Modal, FlatList, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Input, Button, Card } from '../../src/components';
+import {
+  ScreenWrapper,
+  Typography,
+  Input,
+  Button,
+  Card,
+  ScreenHeader,
+  SuccessModal,
+  ContactPickerModal,
+  DatePicker,
+} from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useCreateTenant, useUpdateBedStatus } from '../../src/hooks/queries';
 import { useRoomsWithBeds } from '../../src/hooks/queries/useRoomsWithBeds';
 import { regex, messages, normalizeMobile, getApiErrorMessage } from '../../src/utils/validation';
 
 const schema = z.object({
-  fullName: z
-    .string()
-    .min(1, messages.required('Full Name'))
-    .regex(regex.alphabetsOnly, messages.alphabetsOnly('Full Name')),
-  phone: z
-    .string()
-    .min(1, messages.required('Mobile Number'))
-    .regex(regex.mobile, messages.validMobile('Mobile Number')),
-  email: z.union([
-    z.literal(''),
-    z.string().regex(regex.email, messages.validEmail('Email')),
-  ]).optional(),
-  emergencyContact: z.union([
-    z.literal(''),
-    z.string().regex(regex.mobile, messages.validMobile('Emergency Contact')),
-  ]).optional(),
-  rentPerMonth: z
-    .string()
-    .min(1, messages.required('Rent Per Month'))
-    .regex(regex.digitsOnly, 'Rent must be a valid number'),
-  advanceAmount: z
-    .union([
-      z.literal(''),
-      z.string().regex(regex.digitsOnly, 'Advance Amount must be a valid number'),
-    ])
-    .optional(),
+  fullName: z.string().min(1, messages.required('Full Name')).regex(regex.alphabetsOnly, messages.alphabetsOnly('Full Name')),
+  phone: z.string().min(1, messages.required('Mobile Number')).regex(regex.mobile, messages.validMobile('Mobile Number')),
+  email: z.union([z.literal(''), z.string().regex(regex.email, messages.validEmail('Email'))]).optional(),
+  emergencyContact: z.union([z.literal(''), z.string().regex(regex.mobile, messages.validMobile('Emergency Contact'))]).optional(),
+  rentPerMonth: z.string().min(1, messages.required('Rent Per Month')).regex(regex.digitsOnly, 'Rent must be a valid number'),
+  advanceAmount: z.union([z.literal(''), z.string().regex(regex.digitsOnly, 'Advance Amount must be a valid number')]).optional(),
   joinDate: z.string().min(1, messages.required('Join Date')),
 });
 
@@ -59,7 +59,9 @@ const Picker: React.FC<PickerProps> = ({ label, value, placeholder, options, onS
 
   return (
     <>
-      <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>{label}</Typography>
+      <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
+        {label}
+      </Typography>
       <TouchableOpacity
         activeOpacity={0.8}
         disabled={disabled}
@@ -85,8 +87,25 @@ const Picker: React.FC<PickerProps> = ({ label, value, placeholder, options, onS
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }}>
-          <View style={{ backgroundColor: theme.colors.white, borderTopLeftRadius: theme.radius.xl, borderTopRightRadius: theme.radius.xl, paddingBottom: 24, maxHeight: '70%' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.base, borderBottomWidth: 1, borderBottomColor: theme.colors.borderLight }}>
+          <View
+            style={{
+              backgroundColor: theme.colors.white,
+              borderTopLeftRadius: theme.radius.xl,
+              borderTopRightRadius: theme.radius.xl,
+              paddingBottom: 24,
+              maxHeight: '70%',
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: theme.spacing.base,
+                borderBottomWidth: 1,
+                borderBottomColor: theme.colors.borderLight,
+              }}
+            >
               <Typography variant="title1">{label}</Typography>
               <TouchableOpacity onPress={() => setOpen(false)}>
                 <Ionicons name="close" size={24} color={theme.colors.text} />
@@ -109,7 +128,9 @@ const Picker: React.FC<PickerProps> = ({ label, value, placeholder, options, onS
                     backgroundColor: item.value === value ? theme.colors.primarySurface : theme.colors.white,
                   }}
                 >
-                  <Typography variant="bodyMedium" color={item.value === value ? theme.colors.primary : theme.colors.text}>{item.label}</Typography>
+                  <Typography variant="bodyMedium" color={item.value === value ? theme.colors.primary : theme.colors.text}>
+                    {item.label}
+                  </Typography>
                 </TouchableOpacity>
               )}
             />
@@ -128,14 +149,18 @@ export default function AddTenantScreen() {
   const updateBedStatus = useUpdateBedStatus();
   const { data: rooms, isLoading: roomsLoading } = useRoomsWithBeds(pgId);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { joinDate: new Date().toISOString().slice(0, 10) },
   });
 
-  const [selectedRoomId, setSelectedRoomId] = useState<string>('');
-  const [selectedBedId, setSelectedBedId] = useState<string>('');
+  const [selectedRoomId, setSelectedRoomId] = useState('');
+  const [selectedBedId, setSelectedBedId] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
 
   const roomsList = useMemo(() => rooms || [], [rooms]);
   const selectedRoom = useMemo(() => roomsList.find((r) => r.id === selectedRoomId), [roomsList, selectedRoomId]);
@@ -149,10 +174,28 @@ export default function AddTenantScreen() {
     () => roomsList.map((r) => ({ label: `Room ${r.roomNumber} (Floor ${r.floor})`, value: r.id })),
     [roomsList]
   );
-  const bedOptions = useMemo(
-    () => vacantBeds.map((b) => ({ label: `Bed ${b.bedNumber}`, value: b.id })),
-    [vacantBeds]
-  );
+  const bedOptions = useMemo(() => vacantBeds.map((b) => ({ label: `Bed ${b.bedNumber}`, value: b.id })), [vacantBeds]);
+
+  const capturePhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to photos to upload a profile image.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  };
+
+  const onContactSelect = (contact: { name: string; phone?: string }) => {
+    setValue('fullName', contact.name);
+    if (contact.phone) setValue('phone', contact.phone);
+  };
 
   const onSubmit = async (data: FormData) => {
     if (!pgId) {
@@ -179,9 +222,7 @@ export default function AddTenantScreen() {
         advanceAmount: data.advanceAmount ? Number(data.advanceAmount) : 0,
       });
       await updateBedStatus.mutateAsync({ id: selectedBedId, status: 'OCCUPIED' });
-      Alert.alert('Success', 'Tenant added successfully', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      setSuccessOpen(true);
     } catch (err: any) {
       setError(getApiErrorMessage(err, 'Failed to add tenant'));
     }
@@ -189,64 +230,168 @@ export default function AddTenantScreen() {
 
   return (
     <ScreenWrapper>
-      <View
-        style={{
-          backgroundColor: theme.colors.primary,
-          paddingTop: theme.spacing.xl,
-          paddingBottom: theme.spacing.xl,
-          paddingHorizontal: theme.spacing.base,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: theme.colors.white,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: theme.spacing.md,
-            }}
-          >
-            <Ionicons name="arrow-back" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Typography variant="headline2" color={theme.colors.white}>Add Tenant</Typography>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Add Tenant"
+        backgroundColor={theme.colors.primary}
+        onBack={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
+      />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.xl }} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }} keyboardShouldPersistTaps="handled">
           <View style={{ paddingHorizontal: theme.spacing.base }}>
             <Card shadow="lg" padding={theme.spacing.lg}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
+                <Ionicons name="camera" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                <Typography variant="title1">Tenant Photo</Typography>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={capturePhoto}
+                style={{
+                  alignSelf: 'center',
+                  width: '100%',
+                  height: 160,
+                  borderRadius: theme.radius.lg,
+                  borderWidth: 2,
+                  borderColor: theme.colors.accentPurple,
+                  borderStyle: 'dashed',
+                  backgroundColor: '#FAF5FF',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: theme.spacing.lg,
+                  overflow: 'hidden',
+                }}
+              >
+                {photoUri ? (
+                  <Ionicons name="image" size={48} color={theme.colors.accentPurple} />
+                ) : (
+                  <>
+                    <View
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 28,
+                        backgroundColor: '#F3E8FF',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: theme.spacing.sm,
+                      }}
+                    >
+                      <Ionicons name="camera" size={28} color={theme.colors.accentPurple} />
+                    </View>
+                    <Typography variant="bodyMedium" color={theme.colors.accentPurple} style={{ fontWeight: '600' }}>
+                      Capture Selfie
+                    </Typography>
+                    <Typography variant="caption" color={theme.colors.textMuted}>
+                      Take a clear photo for verification
+                    </Typography>
+                  </>
+                )}
+              </TouchableOpacity>
+
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
                 <Ionicons name="person" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
                 <Typography variant="title1">Personal information</Typography>
               </View>
 
-              <Controller control={control} name="fullName" render={({ field }) => (
-                <Input label="Full Name *" placeholder="Enter full name" value={field.value} onChangeText={field.onChange} error={errors.fullName?.message} leftIcon="person-outline" />
-              )} />
-              <Controller control={control} name="phone" render={({ field }) => (
-                <Input label="Mobile number *" placeholder="Enter mobile number" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={field.onChange} error={errors.phone?.message} leftIcon="call-outline" />
-              )} />
-              <Controller control={control} name="email" render={({ field }) => (
-                <Input label="Email" placeholder="Enter email" keyboardType="email-address" autoCapitalize="none" value={field.value} onChangeText={field.onChange} error={errors.email?.message} leftIcon="mail-outline" />
-              )} />
-              <Controller control={control} name="emergencyContact" render={({ field }) => (
-                <Input label="Emergency Contact" placeholder="Enter emergency contact" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={field.onChange} error={errors.emergencyContact?.message} leftIcon="people-outline" />
-              )} />
-              <Controller control={control} name="rentPerMonth" render={({ field }) => (
-                <Input label="Rent Per Month *" placeholder="Enter rent" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.rentPerMonth?.message} leftIcon="cash-outline" />
-              )} />
-              <Controller control={control} name="advanceAmount" render={({ field }) => (
-                <Input label="Advance Amount" placeholder="Enter advance amount" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.advanceAmount?.message} leftIcon="wallet-outline" />
-              )} />
-              <Controller control={control} name="joinDate" render={({ field }) => (
-                <Input label="Join Date *" placeholder="YYYY-MM-DD" value={field.value} onChangeText={field.onChange} error={errors.joinDate?.message} leftIcon="calendar-outline" />
-              )} />
+              <Controller
+                control={control}
+                name="fullName"
+                render={({ field }) => (
+                  <Input label="Full Name *" placeholder="Enter full name" value={field.value} onChangeText={field.onChange} error={errors.fullName?.message} leftIcon="person-outline" />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="phone"
+                render={({ field }) => (
+                  <View style={{ position: 'relative' }}>
+                    <Input
+                      label="Mobile number *"
+                      placeholder="Enter mobile number"
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                      value={field.value}
+                      onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))}
+                      error={errors.phone?.message}
+                      leftIcon="call-outline"
+                      rightIcon={
+                        <TouchableOpacity activeOpacity={0.8} onPress={() => setContactModalOpen(true)}>
+                          <Ionicons name="people-outline" size={20} color={theme.colors.primary} />
+                        </TouchableOpacity>
+                      }
+                    />
+                  </View>
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="email"
+                render={({ field }) => (
+                  <Input label="Email" placeholder="Enter email" keyboardType="email-address" autoCapitalize="none" value={field.value} onChangeText={field.onChange} error={errors.email?.message} leftIcon="mail-outline" />
+                )}
+              />
+              <Controller
+                control={control}
+                name="emergencyContact"
+                render={({ field }) => (
+                  <Input label="Emergency Contact" placeholder="Enter emergency contact" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))} error={errors.emergencyContact?.message} leftIcon="people-outline" />
+                )}
+              />
+              <Controller
+                control={control}
+                name="rentPerMonth"
+                render={({ field }) => (
+                  <Input label="Rent Per Month *" placeholder="Enter rent" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.rentPerMonth?.message} leftIcon="cash-outline" />
+                )}
+              />
+              <Controller
+                control={control}
+                name="advanceAmount"
+                render={({ field }) => (
+                  <Input label="Advance Amount" placeholder="Enter advance amount" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.advanceAmount?.message} leftIcon="wallet-outline" />
+                )}
+              />
+              <Controller
+                control={control}
+                name="joinDate"
+                render={({ field }) => (
+                  <>
+                    <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
+                      Join Date *
+                    </Typography>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setDatePickerVisible(true)}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: errors.joinDate ? theme.colors.danger : theme.colors.border,
+                        borderRadius: theme.radius.md,
+                        paddingHorizontal: theme.spacing.md,
+                        paddingVertical: theme.spacing.md,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: theme.spacing.md,
+                        backgroundColor: theme.colors.white,
+                      }}
+                    >
+                      <Typography variant="bodyMedium" color={field.value ? theme.colors.text : theme.colors.textMuted}>
+                        {field.value || 'Select join date'}
+                      </Typography>
+                      <Ionicons name="calendar-outline" size={18} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                    {errors.joinDate && (
+                      <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                        {errors.joinDate.message}
+                      </Typography>
+                    )}
+                  </>
+                )}
+              />
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.md, marginBottom: theme.spacing.sm }}>
                 <Ionicons name="bed" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
@@ -259,25 +404,13 @@ export default function AddTenantScreen() {
                 <Typography variant="body" color={theme.colors.textMuted}>No rooms found. Please add rooms first.</Typography>
               ) : (
                 <>
-                  <Picker
-                    label="Select Room"
-                    value={selectedRoomId}
-                    placeholder="Choose a room"
-                    options={roomOptions}
-                    onSelect={setSelectedRoomId}
-                  />
+                  <Picker label="Select Room" value={selectedRoomId} placeholder="Choose a room" options={roomOptions} onSelect={setSelectedRoomId} />
                   {selectedRoomId && (
                     <>
                       {vacantBeds.length === 0 ? (
                         <Typography variant="body" color={theme.colors.danger}>No vacant beds in this room.</Typography>
                       ) : (
-                        <Picker
-                          label="Select Bed"
-                          value={selectedBedId}
-                          placeholder="Choose a vacant bed"
-                          options={bedOptions}
-                          onSelect={setSelectedBedId}
-                        />
+                        <Picker label="Select Bed" value={selectedBedId} placeholder="Choose a vacant bed" options={bedOptions} onSelect={setSelectedBedId} />
                       )}
                     </>
                   )}
@@ -289,19 +422,60 @@ export default function AddTenantScreen() {
                   {error}
                 </Typography>
               )}
+
+              <View style={{ flexDirection: 'row', marginTop: theme.spacing.lg, gap: theme.spacing.md }}>
+                <View style={{ flex: 1 }}>
+                  <Button title="Cancel" variant="outline" onPress={() => router.back()} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Add Tenant"
+                    loading={createTenant.isPending}
+                    disabled={createTenant.isPending}
+                    onPress={handleSubmit(onSubmit)}
+                    leftIcon={<Ionicons name="person-add" size={20} color={theme.colors.white} />}
+                  />
+                </View>
+              </View>
             </Card>
           </View>
+          <View style={{ height: theme.spacing.xl }} />
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={{ padding: theme.spacing.base }}>
-        <Button
-          title="Add Tenant"
-          loading={createTenant.isPending}
-          leftIcon={<Ionicons name="person-add" size={20} color={theme.colors.white} />}
-          onPress={handleSubmit(onSubmit)}
-        />
-      </View>
+      <ContactPickerModal
+        visible={contactModalOpen}
+        onClose={() => setContactModalOpen(false)}
+        onSelect={onContactSelect}
+      />
+
+      <SuccessModal
+        visible={successOpen}
+        icon="checkmark-circle"
+        title="Tenant Added Successfully"
+        primaryButton={{
+          title: 'Done',
+          onPress: () => {
+            setSuccessOpen(false);
+            router.back();
+          },
+        }}
+        secondaryButton={{
+          title: 'Go to Home',
+          onPress: () => {
+            setSuccessOpen(false);
+            router.replace('/(app)/(tabs)');
+          },
+        }}
+      />
+
+      <DatePicker
+        visible={datePickerVisible}
+        value={watch('joinDate')}
+        onChange={(date) => setValue('joinDate', date.toISOString().slice(0, 10))}
+        onClose={() => setDatePickerVisible(false)}
+        title="Select Join Date"
+      />
     </ScreenWrapper>
   );
 }

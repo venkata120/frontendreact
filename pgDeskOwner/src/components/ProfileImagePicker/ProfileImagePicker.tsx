@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, Alert, ViewStyle } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,10 @@ import { useTheme } from '../../hooks/useTheme';
 import { useUploadProfileImage, useDownloadProfileImage } from '../../hooks/queries';
 import { getApiErrorMessage } from '../../utils/validation';
 import type { ProfileType, ProfileUploadResponse } from '../../types';
+
+export interface ProfileImagePickerRef {
+  pickImage: () => void;
+}
 
 interface Props {
   uri?: string;
@@ -20,7 +24,7 @@ interface Props {
   onError?: (error: Error) => void;
 }
 
-export const ProfileImagePicker: React.FC<Props> = ({
+export const ProfileImagePicker = forwardRef<ProfileImagePickerRef, Props>(({
   uri,
   name,
   size = 90,
@@ -30,11 +34,12 @@ export const ProfileImagePicker: React.FC<Props> = ({
   style,
   onUploaded,
   onError,
-}) => {
+}, ref) => {
   const theme = useTheme();
   const upload = useUploadProfileImage();
   const download = useDownloadProfileImage(entityId, profileType, folder, { enabled: !uri });
   const [pendingUri, setPendingUri] = useState<string | undefined>(uri);
+  const pickImageRef = useRef<(() => void) | undefined>(undefined);
 
   useEffect(() => {
     if (uri) {
@@ -95,6 +100,11 @@ export const ProfileImagePicker: React.FC<Props> = ({
     }
   };
 
+  pickImageRef.current = pickImage;
+  useImperativeHandle(ref, () => ({
+    pickImage: () => pickImageRef.current?.(),
+  }));
+
   return (
     <View style={[{ alignItems: 'center', justifyContent: 'center' }, style]}>
       <TouchableOpacity
@@ -145,4 +155,4 @@ export const ProfileImagePicker: React.FC<Props> = ({
       </TouchableOpacity>
     </View>
   );
-};
+});

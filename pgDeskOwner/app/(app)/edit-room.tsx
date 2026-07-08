@@ -7,41 +7,49 @@ import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Input, Button } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
-import { useRoom, useUpdateRoom, useBedsByRoom, useCreateBed, useDeleteBed } from '../../src/hooks/queries';
+import { useRoom, useUpdateRoom, useBedsByRoom, useCreateBed, useDeleteBed, useProperty } from '../../src/hooks/queries';
 import { messages, getApiErrorMessage } from '../../src/utils/validation';
 
 const MAX_CAPACITY = 10;
 const BED_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-const schema = z.object({
-  roomNumber: z.string().min(1, messages.required('Room Number')).max(20, 'Room number is too long'),
-  floor: z
-    .string()
-    .min(1, messages.required('Floor'))
-    .regex(/^[0-9]+$/, 'Floor must be a valid number')
-    .refine((v) => Number(v) >= 0, 'Floor must be 0 or higher'),
-  capacity: z
-    .string()
-    .min(1, messages.required('Capacity'))
-    .regex(/^[1-9][0-9]?$/, 'Capacity must be a valid number')
-    .refine((v) => Number(v) > 0 && Number(v) <= MAX_CAPACITY, `Capacity must be between 1 and ${MAX_CAPACITY}`),
-});
+const buildSchema = (maxFloors?: number) =>
+  z.object({
+    roomNumber: z.string().min(1, messages.required('Room Number')).max(20, 'Room number is too long'),
+    floor: z
+      .string()
+      .min(1, messages.required('Floor'))
+      .regex(/^[0-9]+$/, 'Floor must be a valid number')
+      .refine((v) => Number(v) >= 0, 'Floor must be 0 or higher')
+      .refine(
+        (v) => maxFloors === undefined || maxFloors <= 0 || Number(v) <= maxFloors,
+        `Floor must be between 0 and ${maxFloors ?? 99}`
+      ),
+    capacity: z
+      .string()
+      .min(1, messages.required('Capacity'))
+      .regex(/^[1-9][0-9]?$/, 'Capacity must be a valid number')
+      .refine((v) => Number(v) > 0 && Number(v) <= MAX_CAPACITY, `Capacity must be between 1 and ${MAX_CAPACITY}`),
+  });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof buildSchema>>;
 
 export default function EditRoomScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: room, isLoading } = useRoom(id);
+  const { data: property } = useProperty(room?.pgId || undefined);
   const { data: beds } = useBedsByRoom(id);
   const updateRoom = useUpdateRoom();
+  const maxFloors = property?.numberOfFloors;
   const createBed = useCreateBed();
   const deleteBed = useDeleteBed();
   const [saving, setSaving] = useState(false);
 
   const occupiedBeds = beds?.filter((b) => b.status === 'OCCUPIED').length ?? 0;
 
+  const schema = buildSchema(maxFloors);
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });

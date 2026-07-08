@@ -1,11 +1,15 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { AuthService } from '../../services/auth';
-import type { User, UserRole } from '../../types';
+import { AuthService, mapBackendRole } from '../../services/auth';
+import { usersService } from '../../api/services';
+import type { Session, User, UserRole } from '../../types';
 
 interface AuthState {
   user: User | null;
   token: string | null;
   refreshToken: string | null;
+  userId: string | null;
+  userName: string | null;
+  userRole: UserRole | null;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
@@ -16,43 +20,69 @@ const initialState: AuthState = {
   user: null,
   token: null,
   refreshToken: null,
+  userId: null,
+  userName: null,
+  userRole: null,
   isAuthenticated: false,
   loading: false,
   error: null,
   role: null,
 };
 
-export const login = createAsyncThunk(
-  'auth/login',
-  async (payload: { phone: string; role?: UserRole }, { rejectWithValue }) => {
+const hydrateFromSession = (state: AuthState, session: Session) => {
+  state.token = session.accessToken;
+  state.refreshToken = session.refreshToken;
+  state.userId = session.userId;
+  state.userName = session.userName;
+  state.userRole = mapBackendRole(session.userRole);
+  state.isAuthenticated = true;
+  state.user = state.user || {
+    id: session.userId,
+    name: session.userName,
+    email: '',
+    role: mapBackendRole(session.userRole),
+    active: true,
+  };
+};
+
+export const loginWithPassword = createAsyncThunk(
+  'auth/loginWithPassword',
+  async (
+    payload: { email: string; password: string; role?: UserRole },
+    { rejectWithValue }
+  ) => {
     try {
-      const response = await AuthService.login(payload);
-      return response;
+      const session = await AuthService.loginWithPassword(payload);
+      if (!session?.userId) {
+        console.error('[auth/loginWithPassword] login response missing userId', session);
+        return rejectWithValue('Login succeeded but user id is missing from server response.');
+      }
+      const fullUser = await usersService.getById(session.userId);
+      return { session, user: fullUser };
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Login failed');
+      return rejectWithValue(error?.response?.data?.message || error.message || 'Login failed');
     }
   }
 );
 
-export const verifyOTP = createAsyncThunk(
-  'auth/verifyOTP',
-  async (payload: { phone: string; otp: string }, { rejectWithValue }) => {
-    try {
-      const response = await AuthService.verifyOTP(payload);
-      return response;
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'OTP verification failed');
+export const loadSession = createAsyncThunk('auth/loadSession', async (_, { rejectWithValue }) => {
+  try {
+    const session = await AuthService.getSession();
+    if (!session) return null;
+    if (!session.userId) {
+      console.error('[auth/loadSession] stored session missing userId', session);
+      await AuthService.logout();
+      return null;
     }
+    const fullUser = await usersService.getById(session.userId);
+    return { session, user: fullUser };
+  } catch (error: any) {
+    return rejectWithValue(error?.response?.data?.message || error.message || 'Session load failed');
   }
-);
+});
 
 export const logout = createAsyncThunk('auth/logout', async () => {
   await AuthService.logout();
-});
-
-export const loadSession = createAsyncThunk('auth/loadSession', async () => {
-  const session = await AuthService.getSession();
-  return session;
 });
 
 const authSlice = createSlice({
@@ -68,44 +98,37 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(login.pending, (state) => {
+      .addCase(loginWithPassword.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(login.fulfilled, (state) => {
+      .addCase(loginWithPassword.fulfilled, (state, action) => {
         state.loading = false;
+        hydrateFromSession(state, action.payload.session);
+        state.user = action.payload.user
+          ? { ...action.payload.user, role: mapBackendRole(action.payload.user.role as any) }
+          : state.user;
       })
-      .addCase(login.rejected, (state, action) => {
+      .addCase(loginWithPassword.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = (action.payload as string) || 'Login failed';
       })
-      .addCase(verifyOTP.pending, (state) => {
+      .addCase(logout.fulfilled, () => initialState)
+      .addCase(loadSession.pending, (state) => {
         state.loading = true;
-        state.error = null;
-      })
-      .addCase(verifyOTP.fulfilled, (state, action) => {
-        state.loading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
-        state.refreshToken = action.payload.refreshToken;
-        state.role = action.payload.user.role;
-        state.isAuthenticated = true;
-      })
-      .addCase(verifyOTP.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-      .addCase(logout.fulfilled, (state) => {
-        return initialState;
       })
       .addCase(loadSession.fulfilled, (state, action) => {
-        if (action.payload) {
-          state.user = action.payload.user;
-          state.token = action.payload.token;
-          state.refreshToken = action.payload.refreshToken;
-          state.role = action.payload.user.role;
-          state.isAuthenticated = true;
+        state.loading = false;
+        if (action.payload?.session) {
+          hydrateFromSession(state, action.payload.session);
+          if (action.payload.user) {
+            state.user = { ...action.payload.user, role: mapBackendRole(action.payload.user.role as any) };
+          }
         }
+      })
+      .addCase(loadSession.rejected, (state) => {
+        state.loading = false;
+        state.isAuthenticated = false;
       });
   },
 });

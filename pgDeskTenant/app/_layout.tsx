@@ -21,6 +21,7 @@ import { AppProviders } from '../src/components';
 import { loadSession } from '../src/redux/slices/authSlice';
 import { store, RootState } from '../src/redux/store';
 import { useTheme } from '../src/hooks/useTheme';
+import { useTenant } from '../src/context/TenantContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,21 +29,22 @@ function RootLayoutNav() {
   const theme = useTheme();
   const router = useRouter();
   const segments = useSegments();
-  const { isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, loading: authLoading } = useSelector((state: RootState) => state.auth);
+  const { isLoading: tenantLoading } = useTenant();
 
   useEffect(() => {
     store.dispatch(loadSession());
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (authLoading || tenantLoading) return;
     const inAuthGroup = segments[0] === '(auth)';
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/(app)/(tabs)');
     }
-  }, [isAuthenticated, loading, segments]);
+  }, [isAuthenticated, authLoading, tenantLoading, segments]);
 
   return (
     <>

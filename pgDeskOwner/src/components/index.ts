@@ -15,3 +15,5 @@ export { PgSelector } from './PgSelector/PgSelector';
 export { DatePicker } from './DatePicker/DatePicker';
 export { DaySelector, getRepeatLabel } from './DaySelector/DaySelector';
 export { ProfileImagePicker } from './ProfileImagePicker/ProfileImagePicker';
+export type { ProfileImagePickerRef } from './ProfileImagePicker/ProfileImagePicker';
+export * from './Tenant';

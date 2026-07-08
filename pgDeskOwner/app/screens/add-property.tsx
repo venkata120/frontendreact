@@ -485,7 +485,7 @@ export default function AddPropertyScreen() {
                   control={control}
                   name="city"
                   render={({ field }) => (
-                    <Input label="City" placeholder="Enter city" value={field.value} onChangeText={field.onChange} error={errors.city?.message} />
+                    <Input label="City" placeholder="Enter city" maxLength={50} value={field.value} onChangeText={field.onChange} error={errors.city?.message} />
                   )}
                 />
                 <Controller
@@ -497,6 +497,7 @@ export default function AddPropertyScreen() {
                       placeholder="Enter hostel address"
                       multiline
                       numberOfLines={3}
+                      maxLength={200}
                       value={field.value}
                       onChangeText={field.onChange}
                       error={errors.address?.message}

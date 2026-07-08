@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { login, verifyOTP, logout, clearError, setRole } from '../redux/slices/authSlice';
+import { loginWithPassword, logout, clearError, setRole } from '../redux/slices/authSlice';
 import type { RootState, AppDispatch } from '../redux/store';
 import type { UserRole } from '../types';
 
@@ -8,16 +8,9 @@ export const useAuth = () => {
   const dispatch = useDispatch<AppDispatch>();
   const auth = useSelector((state: RootState) => state.auth);
 
-  const requestOTP = useCallback(
-    (phone: string, role?: UserRole) => {
-      return dispatch(login({ phone, role })).unwrap();
-    },
-    [dispatch]
-  );
-
-  const confirmOTP = useCallback(
-    (phone: string, otp: string) => {
-      return dispatch(verifyOTP({ phone, otp })).unwrap();
+  const login = useCallback(
+    (email: string, password: string, role?: UserRole) => {
+      return dispatch(loginWithPassword({ email, password, role })).unwrap();
     },
     [dispatch]
   );
@@ -39,8 +32,7 @@ export const useAuth = () => {
 
   return {
     ...auth,
-    requestOTP,
-    confirmOTP,
+    login,
     signOut,
     selectRole,
     resetError,

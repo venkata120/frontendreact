@@ -1,10 +1,21 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, Avatar } from '../../src/components';
+import {
+  ScreenWrapper,
+  Typography,
+  Card,
+  Avatar,
+  Button,
+  ScreenHeader,
+  InfoRow,
+  StatusBadge,
+  ConfirmDialog,
+} from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useTenant, useDeleteTenant, useUpdateBedStatus } from '../../src/hooks/queries';
 import { getApiErrorMessage } from '../../src/utils/validation';
+import { useState, useMemo } from 'react';
 
 export default function TenantsProfileScreen() {
   const theme = useTheme();
@@ -13,186 +24,241 @@ export default function TenantsProfileScreen() {
   const { data: tenant, isLoading } = useTenant(id);
   const deleteTenant = useDeleteTenant();
   const updateBedStatus = useUpdateBedStatus();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const isExited = tenant?.status === 'EXITED';
+  const receivedPayments = useMemo(
+    () => (tenant?.rentLedgers || []).filter((l) => l.status === 'PAID').length,
+    [tenant?.rentLedgers]
+  );
 
   const handleCall = async (phone?: string) => {
     if (!phone) return;
     const url = `tel:${phone}`;
     const supported = await Linking.canOpenURL(url);
-    if (supported) {
-      await Linking.openURL(url);
+    if (supported) await Linking.openURL(url);
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    try {
+      await deleteTenant.mutateAsync(id);
+      if (tenant?.bedId) {
+        await updateBedStatus.mutateAsync({ id: tenant.bedId, status: 'VACANT' });
+      }
+      setConfirmDelete(false);
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(app)/(tabs)');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', getApiErrorMessage(err, 'Failed to remove tenant'));
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Tenant',
-      'Are you sure you want to delete this tenant?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (!id) return;
-            try {
-              await deleteTenant.mutateAsync(id);
-              if (tenant?.bedId) {
-                await updateBedStatus.mutateAsync({ id: tenant.bedId, status: 'VACANT' });
-              }
-              router.back();
-            } catch (err: any) {
-              Alert.alert('Error', getApiErrorMessage(err, 'Failed to delete tenant'));
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const infoItems = tenant
-    ? [
-        { label: 'Floor', value: `Floor ${tenant.floor ?? '-'}`, icon: 'trail-sign-outline' },
-        { label: 'Room Number', value: tenant.roomNumber || '-', icon: 'bed-outline' },
-        { label: 'Bed Number', value: tenant.bedId?.slice(-4) || '-', icon: 'checkbox-outline' },
-        { label: 'Date of Check-in', value: tenant.joinDate, icon: 'calendar-outline' },
-        { label: 'Rent Amount', value: `₹ ${tenant.rentPerMonth.toLocaleString()}`, icon: 'cash-outline' },
-        { label: 'Phone', value: tenant.phone, icon: 'call-outline' },
-        { label: 'Email', value: tenant.email || '-', icon: 'mail-outline' },
-        { label: 'Emergency Contact', value: tenant.emergencyContact || '-', icon: 'people-outline' },
-      ]
-    : [];
+  const infoRows = useMemo(
+    () =>
+      tenant
+        ? [
+            { label: 'Floor', value: tenant.floor ? `Floor ${tenant.floor}` : '-', icon: 'trail-sign-outline' as const },
+            { label: 'Room Number', value: tenant.roomNumber || '-', icon: 'bed-outline' as const },
+            { label: 'Bed Number', value: tenant.bedNumber || tenant.bedId?.slice(-4) || '-', icon: 'checkbox-outline' as const },
+            { label: 'Date of Check-in', value: tenant.joinDate ? new Date(tenant.joinDate).toLocaleDateString('en-GB') : '-', icon: 'calendar-outline' as const },
+            { label: 'Rent Amount', value: `₹ ${tenant.rentPerMonth.toLocaleString()}`, icon: 'cash-outline' as const, valueColor: theme.colors.primary },
+            { label: 'Deposit Amount', value: tenant.advanceAmount ? `₹ ${tenant.advanceAmount.toLocaleString()}` : '-', icon: 'wallet-outline' as const },
+            { label: 'Maintenance Amount', value: '-', icon: 'construct-outline' as const },
+            { label: 'Refundable Amount', value: '-', icon: 'refresh-outline' as const },
+          ]
+        : [],
+    [tenant, theme]
+  );
 
   return (
     <ScreenWrapper>
-      <View
-        style={{
-          backgroundColor: theme.colors.primary,
-          paddingTop: theme.spacing.xl,
-          paddingBottom: theme.spacing.xl,
-          paddingHorizontal: theme.spacing.base,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <ScreenHeader
+        title="Tenant Details"
+        backgroundColor={theme.colors.primary}
+        onBack={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
+        rightAction={
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: theme.colors.white,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: theme.spacing.md,
-              }}
-            >
-              <Ionicons name="arrow-back" size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <Typography variant="headline2" color={theme.colors.white}>Tenant Details</Typography>
+            {!isExited && receivedPayments > 0 && (
+              <View
+                style={{
+                  backgroundColor: theme.colors.success,
+                  borderRadius: theme.radius.full,
+                  paddingHorizontal: theme.spacing.md,
+                  paddingVertical: 4,
+                  marginRight: theme.spacing.sm,
+                }}
+              >
+                <Typography variant="captionMedium" color={theme.colors.white}>
+                  Received payments {receivedPayments}
+                </Typography>
+              </View>
+            )}
+            {isExited ? (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setConfirmDelete(true)}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: theme.colors.danger,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="trash-outline" size={18} color={theme.colors.white} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => router.push({ pathname: '/screens/edit-tenant' as any, params: { id } })}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: theme.colors.white,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="create-outline" size={18} color={theme.colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => router.push({ pathname: '/screens/edit-tenant' as any, params: { id } })}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: theme.colors.success,
-                paddingHorizontal: theme.spacing.md,
-                paddingVertical: 6,
-                borderRadius: theme.radius.full,
-                marginRight: theme.spacing.sm,
-              }}
-            >
-              <Ionicons name="create-outline" size={14} color={theme.colors.white} />
-              <Typography variant="caption" color={theme.colors.white} style={{ marginLeft: 4, fontWeight: '600' }}>Edit</Typography>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleDelete}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: theme.colors.danger,
-                paddingHorizontal: theme.spacing.md,
-                paddingVertical: 6,
-                borderRadius: theme.radius.full,
-              }}
-            >
-              <Ionicons name="trash-outline" size={14} color={theme.colors.white} />
-              <Typography variant="caption" color={theme.colors.white} style={{ marginLeft: 4, fontWeight: '600' }}>Delete</Typography>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+        }
+      />
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
         <View style={{ paddingHorizontal: theme.spacing.base }}>
           <Card shadow="lg" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.lg }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Avatar size={70} uri="" name={tenant?.fullName} />
+              <Avatar size={70} uri={tenant?.avatar} name={tenant?.fullName} />
               <View style={{ flex: 1, marginLeft: theme.spacing.md }}>
                 <Typography variant="title1">{tenant?.fullName}</Typography>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tenant?.status === 'ACTIVE' ? theme.colors.success : theme.colors.textMuted, marginRight: 4 }} />
-                  <Typography variant="caption" color={tenant?.status === 'ACTIVE' ? theme.colors.success : theme.colors.textMuted}>
-                    {tenant?.status === 'ACTIVE' ? 'Active' : 'Exited'}
-                  </Typography>
-                </View>
+                {tenant?.status && <StatusBadge status={tenant.status} />}
               </View>
-              <TouchableOpacity activeOpacity={0.8} onPress={() => handleCall(tenant?.phone)}>
-                <Ionicons name="call" size={24} color={theme.colors.primary} />
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => handleCall(tenant?.phone)}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: theme.colors.primarySurface,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="call" size={22} color={theme.colors.primary} />
               </TouchableOpacity>
             </View>
           </Card>
 
           {isLoading && <Typography variant="body" color={theme.colors.textMuted}>Loading details...</Typography>}
 
-          <Card shadow="md" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.xl }}>
+          <Card shadow="md" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.lg }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
               <Ionicons name="person-outline" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
               <Typography variant="title2">Tenant information</Typography>
             </View>
-            {infoItems.map((item) => (
-              <View
+            {infoRows.map((item, index) => (
+              <InfoRow
                 key={item.label}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingVertical: theme.spacing.sm,
-                  borderBottomWidth: 1,
-                  borderBottomColor: theme.colors.borderLight,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name={item.icon as any} size={18} color={theme.colors.textMuted} style={{ marginRight: 8 }} />
-                  <Typography variant="body" color={theme.colors.textMuted}>{item.label}</Typography>
-                </View>
-                <Typography variant="bodyMedium" color={theme.colors.primary}>{item.value}</Typography>
-              </View>
+                icon={item.icon}
+                label={item.label}
+                value={item.value}
+                valueColor={item.valueColor}
+                isLast={index === infoRows.length - 1}
+              />
             ))}
           </Card>
 
           {tenant && tenant.rentLedgers && tenant.rentLedgers.length > 0 && (
-            <Card shadow="md" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.xl }}>
+            <Card shadow="md" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.lg }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
                 <Ionicons name="cash-outline" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
                 <Typography variant="title2">Rent History</Typography>
               </View>
-              {tenant.rentLedgers.map((ledger) => (
-                <View key={ledger.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: theme.spacing.sm, borderBottomWidth: 1, borderBottomColor: theme.colors.borderLight }}>
-                  <Typography variant="bodyMedium">{ledger.rentMonth}/{ledger.rentYear}</Typography>
-                  <Typography variant="bodyMedium" color={ledger.status === 'PAID' ? theme.colors.success : ledger.status === 'PARTIAL' ? theme.colors.warning : theme.colors.danger}>
+              {tenant.rentLedgers.map((ledger, index) => (
+                <View
+                  key={ledger.id}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    paddingVertical: theme.spacing.sm,
+                    borderBottomWidth: index === tenant.rentLedgers!.length - 1 ? 0 : 1,
+                    borderBottomColor: theme.colors.borderLight,
+                  }}
+                >
+                  <Typography variant="bodyMedium">
+                    {ledger.rentMonth}/{ledger.rentYear}
+                  </Typography>
+                  <Typography
+                    variant="bodyMedium"
+                    color={
+                      ledger.status === 'PAID'
+                        ? theme.colors.success
+                        : ledger.status === 'PARTIAL'
+                        ? theme.colors.warning
+                        : theme.colors.danger
+                    }
+                  >
                     ₹{ledger.rentAmount.toLocaleString()} ({ledger.status})
                   </Typography>
                 </View>
               ))}
             </Card>
           )}
+
+          {isExited && (
+            <View style={{ marginBottom: theme.spacing.lg }}>
+              <Button
+                title="Payment History"
+                variant="outline"
+                leftIcon={<Ionicons name="time-outline" size={20} color={theme.colors.primary} />}
+                onPress={() => router.push('/screens/collected-amount' as any)}
+                style={{ marginBottom: theme.spacing.md }}
+              />
+              <Button
+                title="Remove from Records"
+                variant="danger"
+                leftIcon={<Ionicons name="trash-outline" size={20} color={theme.colors.white} />}
+                onPress={() => setConfirmDelete(true)}
+              />
+            </View>
+          )}
+
+          {!isExited && (
+            <Button
+              title="Edit Tenant Details"
+              leftIcon={<Ionicons name="create-outline" size={20} color={theme.colors.white} />}
+              onPress={() => router.push({ pathname: '/screens/edit-tenant' as any, params: { id } })}
+              style={{ marginBottom: theme.spacing.lg }}
+            />
+          )}
+
+          <View style={{ height: theme.spacing.xl }} />
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={confirmDelete}
+        title={isExited ? 'Remove from Records' : 'Delete Tenant'}
+        message={
+          isExited
+            ? 'This tenant will be removed from your records. This action cannot be undone.'
+            : 'Are you sure you want to delete this tenant?'
+        }
+        confirmText={isExited ? 'Delete' : 'Delete'}
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </ScreenWrapper>
   );
 }

@@ -1,25 +1,17 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Avatar, Button } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
-
-const INFO_ITEMS = [
-  { label: 'Floor', value: 'Ground Floor', icon: 'trail-sign-outline' },
-  { label: 'Room Number', value: '101', icon: 'bed-outline' },
-  { label: 'Bed Number', value: '101 B', icon: 'checkbox-outline' },
-  { label: 'Date of Check-in', value: '22-05-2026', icon: 'calendar-outline' },
-  { label: 'Rent Amount', value: '₹ 10,000', icon: 'cash-outline' },
-  { label: 'Deposit Amount', value: '₹ 2,000', icon: 'card-outline' },
-  { label: 'Maintenance Amount', value: '₹ 1,000', icon: 'construct-outline' },
-  { label: 'Refundable Amount', value: '₹ 1,000', icon: 'wallet-outline' },
-];
+import { useTenant } from '../../../src/context/TenantContext';
+import { useTenantDetails } from '../../../src/hooks/queries/useTenant';
+import { formatCurrency, formatDate } from '../../../src/utils/formatters';
 
 const MENU_ITEMS = [
   { icon: 'create-outline', label: 'Edit Profile', route: '/(app)/edit-profile' },
   { icon: 'wallet-outline', label: 'My Dues', route: '/(app)/pending-dues' },
-  { icon: 'notifications-outline', label: 'Notifications', route: '' },
+  { icon: 'notifications-outline', label: 'Notifications', route: '/screens/notifications' },
   { icon: 'help-circle-outline', label: 'Help & Support', route: '/(app)/screens/support' },
   { icon: 'list-outline', label: 'All Screens', route: '/(app)/all-screens' },
 ];
@@ -28,6 +20,19 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { tenantId } = useTenant();
+  const { data: tenantDetails, isLoading } = useTenantDetails(tenantId ?? undefined);
+
+  const infoItems = tenantDetails
+    ? [
+        { label: 'Floor', value: tenantDetails.floor?.toString() ?? '-', icon: 'trail-sign-outline' },
+        { label: 'Room Number', value: tenantDetails.roomNumber ?? '-', icon: 'bed-outline' },
+        { label: 'Bed Number', value: tenantDetails.bedNumber ?? '-', icon: 'checkbox-outline' },
+        { label: 'Date of Check-in', value: formatDate(tenantDetails.joinDate), icon: 'calendar-outline' },
+        { label: 'Rent Amount', value: formatCurrency(tenantDetails.rentPerMonth), icon: 'cash-outline' },
+        { label: 'Deposit Amount', value: formatCurrency(tenantDetails.advanceAmount ?? 0), icon: 'card-outline' },
+      ]
+    : [];
 
   return (
     <ScreenWrapper>
@@ -69,15 +74,24 @@ export default function ProfileScreen() {
           {/* Profile card */}
           <Card shadow="lg" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.lg }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Avatar size={70} uri="https://i.pravatar.cc/150?u=tenant" name={user?.name || 'Raj Kumar'} />
+              <Avatar size={70} uri={user?.avatar} name={user?.name || tenantDetails?.fullName || 'Tenant'} />
               <View style={{ flex: 1, marginLeft: theme.spacing.md }}>
-                <Typography variant="title1">{user?.name || 'Raj Kumar'}</Typography>
+                <Typography variant="title1">{user?.name || tenantDetails?.fullName || 'Tenant'}</Typography>
+                <Typography variant="caption" color={theme.colors.textMuted}>{user?.email}</Typography>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.success, marginRight: 4 }} />
                   <Typography variant="caption" color={theme.colors.success}>Active</Typography>
                 </View>
               </View>
-              <TouchableOpacity activeOpacity={0.8}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={async () => {
+                  const phone = tenantDetails?.phone;
+                  if (!phone) return;
+                  const url = `tel:${phone}`;
+                  if (await Linking.canOpenURL(url)) await Linking.openURL(url);
+                }}
+              >
                 <Ionicons name="call" size={24} color={theme.colors.primary} />
               </TouchableOpacity>
             </View>
@@ -87,27 +101,31 @@ export default function ProfileScreen() {
           <Card shadow="md" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.lg }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
               <Ionicons name="person-outline" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
-              <Typography variant="title2">tenant information</Typography>
+              <Typography variant="title2">Tenant Information</Typography>
             </View>
-            {INFO_ITEMS.map((item) => (
-              <View
-                key={item.label}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingVertical: theme.spacing.sm,
-                  borderBottomWidth: 1,
-                  borderBottomColor: theme.colors.borderLight,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name={item.icon as any} size={18} color={theme.colors.textMuted} style={{ marginRight: 8 }} />
-                  <Typography variant="body" color={theme.colors.textMuted}>{item.label}</Typography>
+            {isLoading ? (
+              <ActivityIndicator />
+            ) : (
+              infoItems.map((item) => (
+                <View
+                  key={item.label}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: theme.spacing.sm,
+                    borderBottomWidth: 1,
+                    borderBottomColor: theme.colors.borderLight,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name={item.icon as any} size={18} color={theme.colors.textMuted} style={{ marginRight: 8 }} />
+                    <Typography variant="body" color={theme.colors.textMuted}>{item.label}</Typography>
+                  </View>
+                  <Typography variant="bodyMedium" color={theme.colors.primary}>{item.value}</Typography>
                 </View>
-                <Typography variant="bodyMedium" color={theme.colors.primary}>{item.value}</Typography>
-              </View>
-            ))}
+              ))
+            )}
           </Card>
 
           {/* Menu */}

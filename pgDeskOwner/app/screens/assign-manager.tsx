@@ -33,6 +33,7 @@ const schema = z.object({
 });
 
 const MAX_NAME_LENGTH = 50;
+const MAX_ADDRESS_LENGTH = 200;
 
 type FormData = z.infer<typeof schema>;
 
@@ -119,7 +120,7 @@ export default function AssignManagerScreen() {
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 220 }}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 260 }}>
           <View style={{ padding: theme.spacing.base }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
               <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.secondary, alignItems: 'center', justifyContent: 'center', marginRight: theme.spacing.md }}>
@@ -139,7 +140,7 @@ export default function AssignManagerScreen() {
                 <Input label="Full Name *" placeholder="Enter manager name" maxLength={MAX_NAME_LENGTH} value={field.value} onChangeText={field.onChange} error={errors.fullName?.message} />
               )} />
               <Controller control={control} name="phone" render={({ field }) => (
-                <Input label="Phone Number *" placeholder="Enter phone number" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={field.onChange} error={errors.phone?.message} />
+                <Input label="Phone Number *" placeholder="Enter phone number" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))} error={errors.phone?.message} />
               )} />
               <Controller control={control} name="email" render={({ field }) => (
                 <Input label="Email *" placeholder="Enter email" keyboardType="email-address" autoCapitalize="none" value={field.value} onChangeText={field.onChange} error={errors.email?.message} />
@@ -148,7 +149,7 @@ export default function AssignManagerScreen() {
                 <Input label="Password *" placeholder="Set login password" secureTextEntry enableVisibilityToggle value={field.value} onChangeText={field.onChange} error={errors.password?.message} />
               )} />
               <Controller control={control} name="address" render={({ field }) => (
-                <Input label="Address" placeholder="Enter address" multiline numberOfLines={3} inputStyle={{ height: 80, textAlignVertical: 'top' }} maxLength={200} value={field.value} onChangeText={field.onChange} error={errors.address?.message} />
+                <Input label="Address" placeholder="Enter address" multiline numberOfLines={3} inputStyle={{ height: 80, textAlignVertical: 'top' }} maxLength={MAX_ADDRESS_LENGTH} value={field.value} onChangeText={field.onChange} error={errors.address?.message} />
               )} />
             </Card>
           </View>

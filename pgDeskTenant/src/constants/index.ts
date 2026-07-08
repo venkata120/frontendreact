@@ -1,15 +1,11 @@
 export const APP_NAME = 'PG Desk Tenant';
 export const APP_VERSION = '1.0.0';
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080';
-export const MOCK_DELAY_MS = 500;
-export const OTP_LENGTH = 4;
-export const PHONE_COUNTRY_CODE = '+91';
+export const DEFAULT_TENANT_ID = process.env.EXPO_PUBLIC_TENANT_ID;
 
 export const ROUTES = {
   AUTH: {
     LOGIN: '/(auth)/login',
-    OTP: '/(auth)/otp',
-    SIGNUP: '/(auth)/signup',
   },
   APP: {
     HOME: '/(app)/(tabs)',

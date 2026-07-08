@@ -1,49 +1,77 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authService } from '../api/services';
+import { setSession, clearSession, getSession } from '../api/client';
 import { Storage } from './storage';
-import { mockApi } from '../API/mockApi';
-import type { AuthResponse, User, UserRole } from '../types';
+import type { AuthRequest, Session, UserRole, BackendUserRole } from '../types';
 
-const SESSION_KEY = '@pgdesk/session';
+const SELECTED_TENANT_KEY = '@pgdesk/selected-tenant';
 const ROLE_KEY = '@pgdesk/role';
 
+export function mapBackendRole(role: BackendUserRole): UserRole {
+  if (role === 'OWNER') return 'owner';
+  if (role === 'MANAGER') return 'manager';
+  return 'tenant';
+}
+
 export const AuthService = {
-  async login(payload: { phone: string; role?: UserRole }): Promise<{ message: string; otp: string }> {
-    await Storage.setString(ROLE_KEY, payload.role || 'tenant');
-    return mockApi.auth.login(payload.phone);
+  async loginWithPassword(payload: AuthRequest & { role?: UserRole }): Promise<Session> {
+    const response = await authService.login({ email: payload.email, password: payload.password });
+
+    console.log('[AuthService] login response:', JSON.stringify(response, null, 2));
+    const session: Session = {
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      tokenType: response.tokenType || 'Bearer',
+      userId: response.userId,
+      userName: response.userName,
+      userRole: response.userRole,
+    };
+    await setSession(session);
+    if (payload.role) {
+      await Storage.setString(ROLE_KEY, payload.role);
+    }
+    return session;
   },
 
-  async verifyOTP(payload: { phone: string; otp: string }): Promise<AuthResponse> {
-    const role = (await Storage.getString(ROLE_KEY)) as UserRole;
-    const response = await mockApi.auth.verifyOTP(payload.phone, payload.otp, role);
-    await Storage.setObject(SESSION_KEY, response);
-    return response;
+  async refreshSession(): Promise<Session | null> {
+    const session = await getSession();
+    if (!session?.refreshToken) return null;
+    const response = await authService.refresh(session.refreshToken);
+    const refreshed: Session = {
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      tokenType: response.tokenType || 'Bearer',
+      userId: response.userId,
+      userName: response.userName,
+      userRole: response.userRole,
+    };
+    await setSession(refreshed);
+    return refreshed;
   },
 
   async logout(): Promise<void> {
-    await Storage.remove(SESSION_KEY);
+    await clearSession();
     await Storage.remove(ROLE_KEY);
+    await AsyncStorage.removeItem(SELECTED_TENANT_KEY);
   },
 
-  async getSession(): Promise<AuthResponse | null> {
-    return Storage.getObject<AuthResponse>(SESSION_KEY);
+  async getSession(): Promise<Session | null> {
+    return getSession();
   },
 
   async getRole(): Promise<UserRole | null> {
     return (await Storage.getString(ROLE_KEY)) as UserRole | null;
   },
 
-  async forgotPassword(phone: string): Promise<{ message: string }> {
-    return mockApi.auth.forgotPassword(phone);
+  async setRole(role: UserRole): Promise<void> {
+    await Storage.setString(ROLE_KEY, role);
   },
 
-  async resetPassword(payload: { phone: string; otp: string; password: string }): Promise<{ message: string }> {
-    return mockApi.auth.resetPassword(payload);
+  async getSelectedTenantId(): Promise<string | null> {
+    return AsyncStorage.getItem(SELECTED_TENANT_KEY);
   },
 
-  async getProfile(): Promise<User> {
-    return mockApi.users.getProfile();
-  },
-
-  async updateProfile(user: Partial<User>): Promise<User> {
-    return mockApi.users.updateProfile(user);
+  async setSelectedTenantId(tenantId: string): Promise<void> {
+    await AsyncStorage.setItem(SELECTED_TENANT_KEY, tenantId);
   },
 };

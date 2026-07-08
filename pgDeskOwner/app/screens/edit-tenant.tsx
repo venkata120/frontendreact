@@ -1,36 +1,30 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, ScrollView, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Input, Button, Card, ProfileImagePicker } from '../../src/components';
+import {
+  ScreenWrapper,
+  Typography,
+  Input,
+  Button,
+  Card,
+  ProfileImagePicker,
+  type ProfileImagePickerRef,
+  ScreenHeader,
+} from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useTenant, useUpdateTenant } from '../../src/hooks/queries';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { regex, messages, normalizeMobile, getApiErrorMessage } from '../../src/utils/validation';
 
 const schema = z.object({
-  fullName: z
-    .string()
-    .min(1, messages.required('Full Name'))
-    .regex(regex.alphabetsOnly, messages.alphabetsOnly('Full Name')),
-  phone: z
-    .string()
-    .min(1, messages.required('Mobile Number'))
-    .regex(regex.mobile, messages.validMobile('Mobile Number')),
-  email: z.union([
-    z.literal(''),
-    z.string().regex(regex.email, messages.validEmail('Email')),
-  ]).optional(),
-  emergencyContact: z.union([
-    z.literal(''),
-    z.string().regex(regex.mobile, messages.validMobile('Emergency Contact')),
-  ]).optional(),
-  rentPerMonth: z
-    .string()
-    .min(1, messages.required('Rent Per Month'))
-    .regex(regex.digitsOnly, 'Rent must be a valid number'),
+  fullName: z.string().min(1, messages.required('Full Name')).regex(regex.alphabetsOnly, messages.alphabetsOnly('Full Name')),
+  phone: z.string().min(1, messages.required('Mobile Number')).regex(regex.mobile, messages.validMobile('Mobile Number')),
+  email: z.union([z.literal(''), z.string().regex(regex.email, messages.validEmail('Email'))]).optional(),
+  emergencyContact: z.union([z.literal(''), z.string().regex(regex.mobile, messages.validMobile('Emergency Contact'))]).optional(),
+  rentPerMonth: z.string().min(1, messages.required('Rent Per Month')).regex(regex.digitsOnly, 'Rent must be a valid number'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -41,7 +35,7 @@ export default function EditTenantScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: tenant, isLoading } = useTenant(id);
   const updateTenant = useUpdateTenant();
-  const [saving, setSaving] = useState(false);
+  const photoPickerRef = useRef<ProfileImagePickerRef>(null);
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -61,7 +55,6 @@ export default function EditTenantScreen() {
 
   const onSubmit = async (data: FormData) => {
     if (!id) return;
-    setSaving(true);
     try {
       await updateTenant.mutateAsync({
         id,
@@ -73,47 +66,21 @@ export default function EditTenantScreen() {
           rentPerMonth: Number(data.rentPerMonth),
         },
       });
-      Alert.alert('Success', 'Tenant updated successfully', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      Alert.alert('Success', 'Tenant updated successfully', [{ text: 'OK', onPress: () => router.back() }]);
     } catch (err: any) {
       Alert.alert('Error', getApiErrorMessage(err, 'Failed to update tenant'));
-    } finally {
-      setSaving(false);
     }
   };
 
   return (
     <ScreenWrapper>
-      <View
-        style={{
-          backgroundColor: theme.colors.primary,
-          paddingTop: theme.spacing.xl,
-          paddingBottom: theme.spacing.xl,
-          paddingHorizontal: theme.spacing.base,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: theme.colors.white,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: theme.spacing.md,
-            }}
-          >
-            <Ionicons name="arrow-back" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Typography variant="headline2" color={theme.colors.white}>Edit Tenant Details</Typography>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Edit Tenant Details"
+        backgroundColor={theme.colors.primary}
+        onBack={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
+      />
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
         <View style={{ paddingHorizontal: theme.spacing.base }}>
           <Card shadow="lg" padding={theme.spacing.lg}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
@@ -123,35 +90,65 @@ export default function EditTenantScreen() {
 
             <View style={{ alignItems: 'center', marginBottom: theme.spacing.lg }}>
               <ProfileImagePicker
-                size={100}
+                ref={photoPickerRef}
+                size={120}
                 uri={tenant?.avatar}
                 name={tenant?.fullName}
                 profileType="TENANT"
                 entityId={tenant?.id}
                 onUploaded={(result) => {
-                  // Optionally refetch tenant or update local state with result.objectUrl
                   console.log('[EditTenant] uploaded', result.objectUrl);
                 }}
               />
+              <View style={{ marginTop: theme.spacing.md }}>
+                <Button
+                  title="Retake Photo"
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Ionicons name="camera" size={16} color={theme.colors.primary} />}
+                  onPress={() => photoPickerRef.current?.pickImage()}
+                  fullWidth={false}
+                />
+              </View>
             </View>
 
             {isLoading && <Typography variant="body" color={theme.colors.textMuted}>Loading...</Typography>}
 
-            <Controller control={control} name="fullName" render={({ field }) => (
-              <Input label="Full Name *" placeholder="Enter full name" value={field.value} onChangeText={field.onChange} error={errors.fullName?.message} leftIcon="person-outline" />
-            )} />
-            <Controller control={control} name="phone" render={({ field }) => (
-              <Input label="Mobile number *" placeholder="Enter mobile number" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={field.onChange} error={errors.phone?.message} leftIcon="call-outline" />
-            )} />
-            <Controller control={control} name="email" render={({ field }) => (
-              <Input label="Email" placeholder="Enter email" keyboardType="email-address" value={field.value} onChangeText={field.onChange} error={errors.email?.message} leftIcon="mail-outline" />
-            )} />
-            <Controller control={control} name="emergencyContact" render={({ field }) => (
-              <Input label="Emergency Contact" placeholder="Enter emergency contact" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={field.onChange} error={errors.emergencyContact?.message} leftIcon="people-outline" />
-            )} />
-            <Controller control={control} name="rentPerMonth" render={({ field }) => (
-              <Input label="Rent Per Month *" placeholder="Enter rent" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.rentPerMonth?.message} leftIcon="cash-outline" />
-            )} />
+            <Controller
+              control={control}
+              name="fullName"
+              render={({ field }) => (
+                <Input label="Full Name *" placeholder="Enter full name" value={field.value} onChangeText={field.onChange} error={errors.fullName?.message} leftIcon="person-outline" />
+              )}
+            />
+            <Controller
+              control={control}
+              name="phone"
+              render={({ field }) => (
+                <Input label="Mobile number *" placeholder="Enter mobile number" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={field.onChange} error={errors.phone?.message} leftIcon="call-outline" />
+              )}
+            />
+            <Controller
+              control={control}
+              name="email"
+              render={({ field }) => (
+                <Input label="Email" placeholder="Enter email" keyboardType="email-address" value={field.value} onChangeText={field.onChange} error={errors.email?.message} leftIcon="mail-outline" />
+              )}
+            />
+            <Controller
+              control={control}
+              name="emergencyContact"
+              render={({ field }) => (
+                <Input label="Emergency Contact" placeholder="Enter emergency contact" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={field.onChange} error={errors.emergencyContact?.message} leftIcon="people-outline" />
+              )}
+            />
+            <Controller
+              control={control}
+              name="rentPerMonth"
+              render={({ field }) => (
+                <Input label="Rent Per Month *" placeholder="Enter rent" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.rentPerMonth?.message} leftIcon="cash-outline" />
+              )}
+            />
 
             <Input
               label="Check-in Date"
@@ -163,18 +160,18 @@ export default function EditTenantScreen() {
             <Typography variant="caption" color={theme.colors.textMuted} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.md }}>
               Check-in date cannot be modified after tenant creation.
             </Typography>
+
+            <Button
+              title="Save Changes"
+              loading={updateTenant.isPending}
+              disabled={updateTenant.isPending}
+              leftIcon={<Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />}
+              onPress={handleSubmit(onSubmit)}
+            />
           </Card>
         </View>
+        <View style={{ height: theme.spacing.xl }} />
       </ScrollView>
-
-      <View style={{ padding: theme.spacing.base }}>
-        <Button
-          title="Save Changes"
-          loading={saving || updateTenant.isPending}
-          leftIcon={<Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />}
-          onPress={handleSubmit(onSubmit)}
-        />
-      </View>
     </ScreenWrapper>
   );
 }

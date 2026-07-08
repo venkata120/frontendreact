@@ -22,3 +22,8 @@ export { default as AnimationReqSent3 } from './animation-req-sent-3';
 export { default as TermsConditions } from './terms-conditions';
 export { default as AnimationReqSent4 } from './animation-req-sent-4';
 export { default as Terms } from './terms';
+
+// Barrel file; Expo Router requires a default export even though this is not a real route.
+export default function ScreensIndex() {
+  return null;
+}

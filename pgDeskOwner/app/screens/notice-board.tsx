@@ -511,6 +511,7 @@ export default function NoticeBoardScreen() {
       <Modal
         animationType="slide"
         transparent
+        statusBarTranslucent
         visible={modalVisible}
         onRequestClose={() => {
           resetForm();

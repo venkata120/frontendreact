@@ -1,9 +1,14 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { useRef, useCallback } from 'react';
+import { View, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Avatar } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
+import { useTenant } from '../../../src/context/TenantContext';
+import { useTenantDetails } from '../../../src/hooks/queries/useTenant';
+import { useAnnouncementsByPg } from '../../../src/hooks/queries/useAnnouncements';
+import { formatCurrency, formatDate } from '../../../src/utils/formatters';
 
 const QUICK_ACTIONS = [
   { icon: 'wallet-outline', label: 'My Dues', route: '/(app)/pending-dues' },
@@ -15,7 +20,22 @@ const QUICK_ACTIONS = [
 export default function TenantHomeScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const navigating = useRef(false);
+
+  const navigateOnce = useCallback((route: string) => {
+    if (navigating.current) return;
+    navigating.current = true;
+    router.push(route as any);
+    setTimeout(() => {
+      navigating.current = false;
+    }, 500);
+  }, [router]);
   const { user } = useAuth();
+  const { tenantId, propertyId } = useTenant();
+  const { data: tenantDetails, isLoading: isTenantLoading } = useTenantDetails(tenantId ?? undefined);
+  const { data: announcements } = useAnnouncementsByPg(propertyId ?? undefined);
+
+  const latestAnnouncement = announcements?.[0];
 
   return (
     <ScreenWrapper>
@@ -30,16 +50,17 @@ export default function TenantHomeScreen() {
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.22)' }} />
           <View style={{ position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Avatar size={46} uri="https://i.pravatar.cc/150?u=tenant" name={user?.name || 'Raj Kumar'} />
+              <Avatar size={46} uri={user?.avatar} name={user?.name || tenantDetails?.fullName || 'Tenant'} />
               <View style={{ marginLeft: theme.spacing.sm }}>
                 <Typography variant="bodyMedium" color={theme.colors.white} style={{ fontWeight: '600' }}>
-                  {user?.name || 'Raj Kumar'}
+                  {user?.name || tenantDetails?.fullName || 'Tenant'}
                 </Typography>
                 <Typography variant="caption" color={theme.colors.white}>Student</Typography>
               </View>
             </View>
             <TouchableOpacity
               activeOpacity={0.8}
+              onPress={() => navigateOnce('/screens/notifications')}
               style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FACC15', alignItems: 'center', justifyContent: 'center' }}
             >
               <Ionicons name="notifications" size={22} color={theme.colors.white} />
@@ -49,11 +70,11 @@ export default function TenantHomeScreen() {
           <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16, flexDirection: 'row' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: theme.spacing.lg }}>
               <Typography variant="bodyMedium" color={theme.colors.white}>Floor - </Typography>
-              <Typography variant="title2" color={theme.colors.white}>1</Typography>
+              <Typography variant="title2" color={theme.colors.white}>{tenantDetails?.floor ?? '-'}</Typography>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Typography variant="bodyMedium" color={theme.colors.white}>Room - </Typography>
-              <Typography variant="title2" color={theme.colors.white}>101</Typography>
+              <Typography variant="title2" color={theme.colors.white}>{tenantDetails?.roomNumber ?? '-'}</Typography>
             </View>
           </View>
         </View>
@@ -61,25 +82,31 @@ export default function TenantHomeScreen() {
         <View style={{ padding: theme.spacing.base }}>
           {/* Rent Status */}
           <Card shadow="lg" padding={theme.spacing.lg} style={{ marginBottom: theme.spacing.lg, backgroundColor: theme.colors.primary }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View>
-                <Typography variant="caption" color={theme.colors.white}>Monthly Rent</Typography>
-                <Typography variant="headline1" color={theme.colors.white}>₹10,000</Typography>
-                <Typography variant="caption" color={theme.colors.white} style={{ opacity: 0.8 }}>Due on 05 Jun 2026</Typography>
+            {isTenantLoading ? (
+              <ActivityIndicator color={theme.colors.white} />
+            ) : (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <Typography variant="caption" color={theme.colors.white}>Monthly Rent</Typography>
+                  <Typography variant="headline1" color={theme.colors.white}>{formatCurrency(tenantDetails?.rentPerMonth ?? 0)}</Typography>
+                  <Typography variant="caption" color={theme.colors.white} style={{ opacity: 0.8 }}>
+                    Due on {tenantDetails?.rentLedgers?.[0]?.dueDate ? formatDate(tenantDetails.rentLedgers[0].dueDate) : '05th of month'}
+                  </Typography>
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: theme.colors.white,
+                    paddingHorizontal: theme.spacing.lg,
+                    paddingVertical: theme.spacing.sm,
+                    borderRadius: theme.radius.full,
+                  }}
+                  onPress={() => navigateOnce('/(app)/pending-dues')}
+                >
+                  <Typography variant="bodyMedium" color={theme.colors.primary} style={{ fontWeight: '600' }}>Pay Now</Typography>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={{
-                  backgroundColor: theme.colors.white,
-                  paddingHorizontal: theme.spacing.lg,
-                  paddingVertical: theme.spacing.sm,
-                  borderRadius: theme.radius.full,
-                }}
-                onPress={() => router.push('/(app)/pending-dues')}
-              >
-                <Typography variant="bodyMedium" color={theme.colors.primary} style={{ fontWeight: '600' }}>Pay Now</Typography>
-              </TouchableOpacity>
-            </View>
+            )}
           </Card>
 
           {/* Quick Actions */}
@@ -90,7 +117,7 @@ export default function TenantHomeScreen() {
                 key={item.label}
                 activeOpacity={0.8}
                 style={{ alignItems: 'center', width: '22%' }}
-                onPress={() => router.push(item.route as any)}
+                onPress={() => navigateOnce(item.route)}
               >
                 <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: theme.colors.primarySurface, alignItems: 'center', justifyContent: 'center', marginBottom: theme.spacing.xs }}>
                   <Ionicons name={item.icon as any} size={24} color={theme.colors.primary} />
@@ -100,14 +127,27 @@ export default function TenantHomeScreen() {
             ))}
           </View>
 
+          {/* Latest Announcement */}
+          {latestAnnouncement && (
+            <>
+              <Typography variant="title1" style={{ marginBottom: theme.spacing.md }}>Latest Announcement</Typography>
+              <Card shadow="md" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.lg }}>
+                <Typography variant="title2" color={theme.colors.primary}>{latestAnnouncement.title}</Typography>
+                <Typography variant="body" color={theme.colors.textSecondary} numberOfLines={2} style={{ marginTop: theme.spacing.xs }}>
+                  {latestAnnouncement.description}
+                </Typography>
+              </Card>
+            </>
+          )}
+
           {/* Room Info */}
           <Typography variant="title1" style={{ marginBottom: theme.spacing.md }}>My Room</Typography>
           <Card shadow="md" padding={theme.spacing.lg}>
             {[
-              { label: 'Room Number', value: '101' },
-              { label: 'Bed Number', value: '101 B' },
-              { label: 'Floor', value: 'Ground Floor' },
-              { label: 'Check-in Date', value: '22-05-2026' },
+              { label: 'Room Number', value: tenantDetails?.roomNumber ?? '-' },
+              { label: 'Bed Number', value: tenantDetails?.bedNumber ?? '-' },
+              { label: 'Floor', value: tenantDetails?.floor?.toString() ?? '-' },
+              { label: 'Check-in Date', value: tenantDetails?.joinDate ? formatDate(tenantDetails.joinDate) : '-' },
             ].map((item, index, arr) => (
               <View
                 key={item.label}

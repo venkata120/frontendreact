@@ -1,13 +1,13 @@
-import { apiClient } from '../API/client';
+import { apiClient } from '../api/client';
 import type {
-  ApiResponse,
+  BackendApiResponse,
   ProfileDownloadResponse,
   ProfileImageFile,
   ProfileType,
   ProfileUploadResponse,
 } from '../types';
 
-const unwrap = <T>(res: { data: ApiResponse<T> }): T => res.data.data;
+const unwrap = <T>(res: { data: BackendApiResponse<T> }): T => res.data.data;
 
 function appendFile(formData: FormData, file: ProfileImageFile | File) {
   if (typeof File !== 'undefined' && file instanceof File) {
@@ -40,7 +40,7 @@ export const profileService = {
     formData.append('folder', folder);
 
     return apiClient
-      .post<ApiResponse<ProfileUploadResponse>>('/api/v1/profiles/upload', formData, {
+      .post<BackendApiResponse<ProfileUploadResponse>>('/api/v1/profiles/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       .then(unwrap);
@@ -48,7 +48,7 @@ export const profileService = {
 
   download: (entityId: string, profileType: ProfileType, folder = 'profiles') =>
     apiClient
-      .get<ApiResponse<ProfileDownloadResponse>>('/api/v1/profiles/download', {
+      .get<BackendApiResponse<ProfileDownloadResponse>>('/api/v1/profiles/download', {
         params: { folder, profileType, entityId },
       })
       .then(unwrap),

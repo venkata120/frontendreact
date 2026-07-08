@@ -2,9 +2,19 @@ import { useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, SearchBar, Avatar, PgSelector } from '../../../src/components';
+import {
+  ScreenWrapper,
+  Typography,
+  SearchBar,
+  Avatar,
+  PgSelector,
+  TenantListItem,
+  TenantOverviewCard,
+  FilterSheet,
+} from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
@@ -18,6 +28,7 @@ const HEADER_IMAGE = 'https://images.unsplash.com/photo-1566073771259-6a85060999
 export default function ManagerTenantsScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { openDrawer } = useDrawer();
   const { selectedPg } = useSelectedPg();
@@ -25,6 +36,8 @@ export default function ManagerTenantsScreen() {
   const managerId = user?.id;
 
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'EXITED'>('ALL');
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const currentMonth = useMemo(() => String(new Date().getMonth() + 1).padStart(2, '0'), []);
   const currentYear = useMemo(() => String(new Date().getFullYear()), []);
@@ -68,43 +81,43 @@ export default function ManagerTenantsScreen() {
     if (!tenants) return [];
     return tenants.map((t) => {
       const mapped = bedMap.get(t.bedId);
-      return {
-        ...t,
-        roomNumber: mapped?.roomNumber,
-        floor: mapped?.floor,
-        bedNumber: mapped?.bedNumber,
-      };
+      return { ...t, roomNumber: mapped?.roomNumber, floor: mapped?.floor, bedNumber: mapped?.bedNumber };
     });
   }, [tenants, bedMap]);
 
   const filtered = useMemo(() => {
-    if (!tenantsWithRooms.length) return [];
-    if (!search.trim()) return tenantsWithRooms;
+    let result = tenantsWithRooms;
+    if (statusFilter !== 'ALL') {
+      result = result.filter((t) => t.status === statusFilter);
+    }
+    if (!search.trim()) return result;
     const q = search.toLowerCase();
-    return tenantsWithRooms.filter(
+    return result.filter(
       (t) =>
         t.fullName.toLowerCase().includes(q) ||
         t.phone.includes(q) ||
         (t.roomNumber && t.roomNumber.toLowerCase().includes(q)) ||
         (t.bedNumber && t.bedNumber.toLowerCase().includes(q))
     );
-  }, [tenantsWithRooms, search]);
+  }, [tenantsWithRooms, search, statusFilter]);
 
-  const OVERVIEW_ITEMS = useMemo(
+  const overviewItems = useMemo(
     () => [
       {
         label: 'Active Tenants',
         value: String(pgSummary?.activeTenants ?? 0),
         icon: 'people' as const,
-        color: theme.colors.success,
-        bg: theme.colors.successSurface,
+        color: theme.colors.accentPurple,
+        bg: '#F3E8FF',
+        route: ROUTES.APP.TENANTS,
       },
       {
         label: 'Left Tenants',
         value: String(pgSummary?.leftTenants ?? 0),
         icon: 'person-remove' as const,
-        color: theme.colors.textTertiary,
-        bg: theme.colors.backgroundSecondary,
+        color: '#0A2A5E',
+        bg: '#E7ECF3',
+        route: ROUTES.SCREENS.LEFT_TENANTS_PROFILE,
       },
       {
         label: 'Collected',
@@ -112,6 +125,7 @@ export default function ManagerTenantsScreen() {
         icon: 'cash' as const,
         color: theme.colors.success,
         bg: theme.colors.successSurface,
+        route: ROUTES.SCREENS.COLLECTED_AMOUNT,
       },
       {
         label: 'Pending',
@@ -119,6 +133,7 @@ export default function ManagerTenantsScreen() {
         icon: 'time' as const,
         color: theme.colors.warning,
         bg: theme.colors.warningSurface,
+        route: ROUTES.SCREENS.PENDING_DUES,
       },
     ],
     [pgSummary, theme]
@@ -126,41 +141,19 @@ export default function ManagerTenantsScreen() {
 
   const isLoading = tenantsLoading || roomsLoading;
 
-  const getStatusChip = (status: Tenant['status']) => {
-    const isActive = status === 'ACTIVE';
-    return (
-      <View
-        style={{
-          backgroundColor: isActive ? theme.colors.successSurface : theme.colors.backgroundSecondary,
-          paddingHorizontal: theme.spacing.sm,
-          paddingVertical: 4,
-          borderRadius: theme.radius.full,
-        }}
-      >
-        <Typography variant="caption" color={isActive ? theme.colors.success : theme.colors.textTertiary} style={{ fontWeight: '600' }}>
-          {status}
-        </Typography>
-      </View>
-    );
-  };
-
   return (
     <ScreenWrapper>
       <View style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={{ position: 'relative' }}>
-            <Image
-              source={{ uri: HEADER_IMAGE }}
-              style={{ width: '100%', height: 180 }}
-              resizeMode="cover"
-            />
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.22)' }} />
+            <Image source={{ uri: HEADER_IMAGE }} style={{ width: '100%', height: 200 }} resizeMode="cover" />
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.28)' }} />
             <View
               style={{
                 position: 'absolute',
-                top: 16,
-                left: 16,
-                right: 16,
+                top: insets.top + theme.spacing.md,
+                left: theme.spacing.base,
+                right: theme.spacing.base,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -168,7 +161,7 @@ export default function ManagerTenantsScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TouchableOpacity onPress={openDrawer}>
-                  <Avatar size={44} uri="" name={selectedPg?.name || user?.name} />
+                  <Avatar size={44} uri={user?.avatar} name={selectedPg?.name || user?.name} />
                 </TouchableOpacity>
                 <View style={{ marginLeft: theme.spacing.sm }}>
                   <PgSelector />
@@ -189,24 +182,64 @@ export default function ManagerTenantsScreen() {
                 <Ionicons name="notifications" size={22} color={theme.colors.white} />
               </TouchableOpacity>
             </View>
+            <View
+              style={{
+                position: 'absolute',
+                bottom: -1,
+                left: 0,
+                right: 0,
+                height: 28,
+                backgroundColor: theme.colors.background,
+                borderTopLeftRadius: theme.radius['2xl'],
+                borderTopRightRadius: theme.radius['2xl'],
+              }}
+            />
           </View>
 
-          <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.base }}>
-            <SearchBar placeholder="Search tenants by name, room or bed" value={search} onChangeText={setSearch} />
+          <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
+              <View style={{ flex: 1, marginRight: theme.spacing.sm }}>
+                <SearchBar
+                  placeholder="Search tenants by name, room or bed"
+                  value={search}
+                  onChangeText={setSearch}
+                  style={{ marginHorizontal: 0, marginVertical: 0 }}
+                />
+              </View>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setFilterOpen(true)}
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: theme.radius.md,
+                  backgroundColor: statusFilter !== 'ALL' ? theme.colors.primarySurface : theme.colors.backgroundSecondary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: statusFilter !== 'ALL' ? theme.colors.primary : theme.colors.border,
+                }}
+              >
+                <Ionicons
+                  name="options-outline"
+                  size={22}
+                  color={statusFilter !== 'ALL' ? theme.colors.primary : theme.colors.text}
+                />
+              </TouchableOpacity>
+            </View>
 
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: theme.spacing.sm }}>
-              {OVERVIEW_ITEMS.map((item) => (
-                <Card key={item.label} shadow="sm" padding={theme.spacing.md} style={{ width: '48%', marginBottom: theme.spacing.md }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: item.bg, alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name={item.icon} size={22} color={item.color} />
-                    </View>
-                    <View style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
-                      <Typography variant="caption" color={theme.colors.textMuted}>{item.label}</Typography>
-                      <Typography variant="title2" color={item.color}>{item.value}</Typography>
-                    </View>
-                  </View>
-                </Card>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+              {overviewItems.map((item) => (
+                <TenantOverviewCard
+                  key={item.label}
+                  label={item.label}
+                  value={item.value}
+                  icon={item.icon}
+                  color={item.color}
+                  bg={item.bg}
+                  onPress={() => router.push(item.route as any)}
+                  style={{ width: '48%', marginBottom: theme.spacing.md }}
+                />
               ))}
             </View>
 
@@ -219,43 +252,82 @@ export default function ManagerTenantsScreen() {
 
             {!isLoading && filtered.length === 0 && (
               <View style={{ alignItems: 'center', paddingVertical: theme.spacing['3xl'] }}>
-                <View style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: theme.colors.primarySurface, alignItems: 'center', justifyContent: 'center', marginBottom: theme.spacing.lg }}>
+                <View
+                  style={{
+                    width: 120,
+                    height: 120,
+                    borderRadius: 60,
+                    backgroundColor: theme.colors.primarySurface,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: theme.spacing.lg,
+                  }}
+                >
                   <Ionicons name="people-outline" size={48} color={theme.colors.textMuted} />
                 </View>
                 <Typography variant="title1">Nothing found</Typography>
-                <Typography variant="body" color={theme.colors.textMuted}>No tenants match your search.</Typography>
+                <Typography variant="body" color={theme.colors.textMuted}>
+                  {search.trim() || statusFilter !== 'ALL' ? 'No tenants match your filters.' : 'No tenants available.'}
+                </Typography>
               </View>
             )}
 
-            {!isLoading && filtered.map((tenant) => (
-              <TouchableOpacity
-                key={tenant.id}
-                activeOpacity={0.8}
-                onPress={() => router.push({ pathname: ROUTES.SCREENS.TENANTS_PROFILE, params: { id: tenant.id } })}
-              >
-                <Card shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Avatar uri="" name={tenant.fullName} size={56} />
-                    <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
-                      <Typography variant="title3">{tenant.fullName}</Typography>
-                      <Typography variant="caption" color={theme.colors.textMuted}>{tenant.phone}</Typography>
-                      <Typography variant="bodyMedium" color={theme.colors.primary}>
-                        Room {tenant.roomNumber || '-'} • Bed {tenant.bedNumber || '-'}
-                      </Typography>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      {getStatusChip(tenant.status)}
-                      <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm }} />
-                    </View>
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            ))}
-          </View>
+            {!isLoading &&
+              filtered.map((tenant) => (
+                <TenantListItem
+                  key={tenant.id}
+                  tenant={tenant}
+                  variant={tenant.status === 'EXITED' ? 'left' : 'default'}
+                  onPress={() => router.push({ pathname: ROUTES.SCREENS.TENANTS_PROFILE, params: { id: tenant.id } })}
+                />
+              ))}
 
-          <View style={{ height: theme.spacing.xl }} />
+            <View style={{ height: theme.spacing.xl }} />
+          </View>
         </ScrollView>
 
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => router.push({ pathname: '/screens/add-tenant' as any, params: { pgId: selectedPg?.id } })}
+          style={{
+            position: 'absolute',
+            bottom: insets.bottom + theme.spacing.md,
+            right: theme.spacing.base,
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: theme.colors.primary,
+            borderRadius: theme.radius.full,
+            paddingHorizontal: theme.spacing.md,
+            paddingVertical: theme.spacing.sm,
+            shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.35,
+            shadowRadius: 8,
+            elevation: 5,
+          }}
+        >
+          <Ionicons name="add" size={22} color={theme.colors.white} />
+          <Typography
+            variant="bodyMedium"
+            color={theme.colors.white}
+            style={{ marginLeft: theme.spacing.xs, fontWeight: '600' }}
+          >
+            Add Tenant
+          </Typography>
+        </TouchableOpacity>
+
+        <FilterSheet
+          visible={filterOpen}
+          onClose={() => setFilterOpen(false)}
+          title="Filter Tenants"
+          selected={statusFilter}
+          onSelect={(v) => setStatusFilter(v)}
+          options={[
+            { label: 'All Tenants', value: 'ALL', icon: 'people-outline' },
+            { label: 'Active Tenants', value: 'ACTIVE', icon: 'people' },
+            { label: 'Left Tenants', value: 'EXITED', icon: 'person-remove' },
+          ]}
+        />
       </View>
     </ScreenWrapper>
   );

@@ -139,26 +139,6 @@ export default function RoomsScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* PG name badge */}
-          <View
-            style={{
-              position: 'absolute',
-              bottom: 16,
-              left: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              borderRadius: theme.radius.full,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-            }}
-          >
-            <Avatar size={28} uri="" name={selectedPg?.name} />
-            <Typography variant="bodyMedium" color={theme.colors.white} style={{ marginLeft: 8 }}>
-              {selectedPg?.name || 'Select PG'}
-            </Typography>
-            <Ionicons name="chevron-down" size={16} color={theme.colors.white} style={{ marginLeft: 4 }} />
-          </View>
         </View>
 
         <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.base }}>

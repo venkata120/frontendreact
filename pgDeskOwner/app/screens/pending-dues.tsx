@@ -1,8 +1,20 @@
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, SearchBar, Avatar, Input, Button } from '../../src/components';
+import {
+  ScreenWrapper,
+  Typography,
+  Card,
+  SearchBar,
+  Avatar,
+  Input,
+  Button,
+  ScreenHeader,
+  TenantOverviewCard,
+  PaymentStats,
+  FilterSheet,
+} from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
 import {
@@ -42,6 +54,8 @@ export default function PendingDuesScreen() {
   const generateDues = useGenerateMonthlyDues();
 
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'DUE' | 'PARTIAL'>('ALL');
+  const [filterOpen, setFilterOpen] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PendingItem | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -49,18 +63,13 @@ export default function PendingDuesScreen() {
 
   const items = useMemo<PendingItem[]>(() => {
     if (!tenants) return [];
-
     const ledgerItems: PendingItem[] = (ledgers || []).map((ledger) => ({ type: 'ledger', ledger }));
     const ledgerTenantIds = new Set((ledgers || []).map((l) => l.tenantId));
 
     const tenantItems: PendingItem[] = tenants
       .filter((tenant) => {
-        // Skip tenants that already appear in DUE/PARTIAL ledgers
         if (ledgerTenantIds.has(tenant.id)) return false;
-        // Skip tenants that have a PAID ledger for current month
-        const paidForMonth = (allMonthLedgers || []).some(
-          (l) => l.tenantId === tenant.id && l.status === 'PAID'
-        );
+        const paidForMonth = (allMonthLedgers || []).some((l) => l.tenantId === tenant.id && l.status === 'PAID');
         return !paidForMonth;
       })
       .map((tenant) => ({ type: 'tenant', tenant, month: CURRENT_MONTH, year: CURRENT_YEAR }));
@@ -69,34 +78,46 @@ export default function PendingDuesScreen() {
   }, [ledgers, tenants, allMonthLedgers]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return items;
+    let result = items;
+    if (statusFilter !== 'ALL') {
+      result = result.filter((item) => {
+        if (item.type === 'ledger') {
+          return item.ledger.status === statusFilter;
+        }
+        return statusFilter === 'DUE';
+      });
+    }
+    if (!search.trim()) return result;
     const q = search.toLowerCase();
-    return items.filter((item) => {
+    return result.filter((item) => {
       const tenant = item.type === 'ledger' ? item.ledger.tenant : item.tenant;
       const name = tenant?.fullName.toLowerCase() || '';
       const room = (tenant?.roomNumber || tenant?.bedNumber || '').toLowerCase();
       return name.includes(q) || room.includes(q);
     });
-  }, [items, search]);
+  }, [items, search, statusFilter]);
 
-  const totalPending = useMemo(() => {
-    return filtered.reduce((sum, item) => {
-      if (item.type === 'ledger') {
-        return sum + (item.ledger.rentAmount - (item.ledger.collectedAmount || 0));
-      }
-      return sum + (item.tenant.rentPerMonth || 0);
-    }, 0);
-  }, [filtered]);
+  const totalPending = useMemo(
+    () =>
+      items.reduce((sum, item) => {
+        if (item.type === 'ledger') {
+          return sum + (item.ledger.rentAmount - (item.ledger.collectedAmount || 0));
+        }
+        return sum + ((item.tenant.rentPerMonth || 0) + (item.tenant.advanceAmount || 0));
+      }, 0),
+    [items]
+  );
 
-  const totalPartialPaid = useMemo(() => {
-    return (ledgers || []).reduce((sum, d) => sum + (d.collectedAmount || 0), 0);
-  }, [ledgers]);
+  const totalPartialPaid = useMemo(
+    () => (ledgers || []).reduce((sum, d) => sum + (d.collectedAmount || 0), 0),
+    [ledgers]
+  );
 
   const getPendingAmount = useCallback((item: PendingItem) => {
     if (item.type === 'ledger') {
       return item.ledger.rentAmount - (item.ledger.collectedAmount || 0);
     }
-    return item.tenant.rentPerMonth || 0;
+    return (item.tenant.rentPerMonth || 0) + (item.tenant.advanceAmount || 0);
   }, []);
 
   const getTenant = useCallback((item: PendingItem) => {
@@ -144,6 +165,13 @@ export default function PendingDuesScreen() {
     closePaymentModal();
   };
 
+  const handleCall = async (phone?: string) => {
+    if (!phone) return;
+    const url = `tel:${phone}`;
+    const supported = await Linking.canOpenURL(url);
+    if (supported) await Linking.openURL(url);
+  };
+
   const isLoading = ledgersLoading || tenantsLoading || monthLedgersLoading;
 
   useFocusEffect(
@@ -154,108 +182,77 @@ export default function PendingDuesScreen() {
 
   return (
     <ScreenWrapper>
-      <View
-        style={{
-          backgroundColor: theme.colors.warning,
-          paddingTop: theme.spacing.xl,
-          paddingBottom: theme.spacing.xl,
-          paddingHorizontal: theme.spacing.base,
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-      >
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: theme.colors.white,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: theme.spacing.md,
-          }}
-        >
-          <Ionicons name="arrow-back" size={20} color={theme.colors.warning} />
-        </TouchableOpacity>
-        <Typography variant="headline2" color={theme.colors.white}>
-          Pending Payments
-        </Typography>
-      </View>
+      <ScreenHeader
+        title="Pending Payments"
+        backgroundColor={theme.colors.warning}
+        onBack={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
+        rightAction={
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => generateDues.mutate({ month: CURRENT_MONTH, year: CURRENT_YEAR })}
+            disabled={generateDues.isPending}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name={generateDues.isPending ? 'refresh' : 'add-circle'} size={22} color={theme.colors.white} />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
         <View style={{ paddingHorizontal: theme.spacing.base }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
             <View style={{ flex: 1, marginRight: theme.spacing.sm }}>
-              <SearchBar placeholder="Search by name or Room" value={search} onChangeText={setSearch} />
+              <SearchBar
+                placeholder="Search by name or Room"
+                value={search}
+                onChangeText={setSearch}
+                style={{ marginHorizontal: 0, marginVertical: 0 }}
+              />
             </View>
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => generateDues.mutate({ month: CURRENT_MONTH, year: CURRENT_YEAR })}
-              disabled={generateDues.isPending}
+              onPress={() => setFilterOpen(true)}
               style={{
                 width: 48,
                 height: 48,
                 borderRadius: theme.radius.md,
-                backgroundColor: theme.colors.backgroundSecondary,
+                backgroundColor: statusFilter !== 'ALL' ? theme.colors.warningSurface : theme.colors.backgroundSecondary,
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderWidth: 1,
-                borderColor: theme.colors.border,
+                borderColor: statusFilter !== 'ALL' ? theme.colors.warning : theme.colors.border,
               }}
             >
-              {generateDues.isPending ? (
-                <Ionicons name="refresh" size={22} color={theme.colors.primary} />
-              ) : (
-                <Ionicons name="add-circle" size={22} color={theme.colors.primary} />
-              )}
+              <Ionicons
+                name="options-outline"
+                size={22}
+                color={statusFilter !== 'ALL' ? theme.colors.warning : theme.colors.text}
+              />
             </TouchableOpacity>
           </View>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: theme.spacing.md }}>
-            <Card shadow="sm" padding={theme.spacing.md} style={{ width: '48%' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: theme.colors.warningSurface,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: theme.spacing.sm,
-                  }}
-                >
-                  <Ionicons name="cash-outline" size={22} color={theme.colors.warning} />
-                </View>
-                <View>
-                  <Typography variant="caption" color={theme.colors.textMuted}>Pending Dues</Typography>
-                  <Typography variant="title2" color={theme.colors.warning}>₹{totalPending.toLocaleString()}</Typography>
-                </View>
-              </View>
-            </Card>
-            <Card shadow="sm" padding={theme.spacing.md} style={{ width: '48%' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: theme.colors.successSurface,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: theme.spacing.sm,
-                  }}
-                >
-                  <Ionicons name="cash-outline" size={22} color={theme.colors.success} />
-                </View>
-                <View>
-                  <Typography variant="caption" color={theme.colors.textMuted}>Partial Paid</Typography>
-                  <Typography variant="title2" color={theme.colors.success}>₹{totalPartialPaid.toLocaleString()}</Typography>
-                </View>
-              </View>
-            </Card>
+          <View style={{ flexDirection: 'row', gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
+            <TenantOverviewCard
+              label="Pending Dues"
+              value={`₹${totalPending.toLocaleString()}`}
+              icon="cash-outline"
+              color={theme.colors.warning}
+              bg={theme.colors.warningSurface}
+            />
+            <TenantOverviewCard
+              label="Partial Paid"
+              value={`₹${totalPartialPaid.toLocaleString()}`}
+              icon="cash-outline"
+              color={theme.colors.success}
+              bg={theme.colors.successSurface}
+            />
           </View>
 
           {isLoading && <Typography variant="body" color={theme.colors.textMuted}>Loading...</Typography>}
@@ -267,7 +264,7 @@ export default function PendingDuesScreen() {
                   width: 120,
                   height: 120,
                   borderRadius: 60,
-                  backgroundColor: theme.colors.primarySurface,
+                  backgroundColor: theme.colors.warningSurface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginBottom: theme.spacing.lg,
@@ -277,7 +274,7 @@ export default function PendingDuesScreen() {
               </View>
               <Typography variant="title1">No Pending Payments</Typography>
               <Typography variant="body" color={theme.colors.textMuted}>
-                All active tenants are up to date.
+                All Payments are up to Date.
               </Typography>
             </View>
           )}
@@ -294,7 +291,7 @@ export default function PendingDuesScreen() {
                 <Card key={isLedger ? item.ledger.id : item.tenant.id} shadow="md" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Avatar uri="" name={tenant?.fullName} size={48} />
+                      <Avatar uri={tenant?.avatar} name={tenant?.fullName} size={48} />
                       <View style={{ marginLeft: theme.spacing.md }}>
                         <Typography variant="title2">{tenant?.fullName || 'Tenant'}</Typography>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -305,49 +302,52 @@ export default function PendingDuesScreen() {
                         </View>
                       </View>
                     </View>
-                    <Typography variant="title2" color={theme.colors.warning}>₹{pending.toLocaleString()}</Typography>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', borderWidth: 1, borderColor: theme.colors.borderLight, borderRadius: theme.radius.md, marginBottom: theme.spacing.md }}>
-                    {[
-                      { label: 'Total amount', value: `₹${rentAmount.toLocaleString()}`, color: theme.colors.text },
-                      { label: 'Partial', value: `₹${collectedAmount.toLocaleString()}`, color: theme.colors.success },
-                      { label: 'Pending', value: `₹${pending.toLocaleString()}`, color: theme.colors.warning },
-                    ].map((stat, index) => (
-                      <View
-                        key={stat.label}
-                        style={{
-                          flex: 1,
-                          paddingVertical: theme.spacing.sm,
-                          alignItems: 'center',
-                          borderRightWidth: index < 2 ? 1 : 0,
-                          borderRightColor: theme.colors.borderLight,
-                        }}
-                      >
-                        <Typography variant="caption" color={theme.colors.textMuted}>{stat.label}</Typography>
-                        <Typography variant="bodyMedium" color={stat.color} style={{ fontWeight: '600' }}>{stat.value}</Typography>
-                      </View>
-                    ))}
-                  </View>
-
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => openPaymentModal(item)}
-                    disabled={recordPayment.isPending}
-                    style={{
-                      backgroundColor: theme.colors.success,
-                      borderRadius: theme.radius.md,
-                      paddingVertical: theme.spacing.sm,
-                      alignItems: 'center',
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Ionicons name="checkmark-circle" size={16} color={theme.colors.white} />
-                    <Typography variant="bodyMedium" color={theme.colors.white} style={{ marginLeft: 6, fontWeight: '600' }}>
-                      Mark as Paid
+                    <Typography variant="title2" color={theme.colors.warning}>
+                      ₹{pending.toLocaleString()}
                     </Typography>
-                  </TouchableOpacity>
+                  </View>
+
+                  <PaymentStats total={rentAmount} partial={collectedAmount} pending={pending} />
+
+                  <View style={{ flexDirection: 'row', marginTop: theme.spacing.md, gap: theme.spacing.md }}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => openPaymentModal(item)}
+                      disabled={recordPayment.isPending}
+                      style={{
+                        flex: 1,
+                        backgroundColor: theme.colors.success,
+                        borderRadius: theme.radius.md,
+                        paddingVertical: theme.spacing.sm,
+                        alignItems: 'center',
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="checkmark-circle" size={16} color={theme.colors.white} />
+                      <Typography variant="bodyMedium" color={theme.colors.white} style={{ marginLeft: 6, fontWeight: '600' }}>
+                        Mark as Paid
+                      </Typography>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => handleCall(tenant?.phone)}
+                      style={{
+                        flex: 1,
+                        backgroundColor: theme.colors.primary,
+                        borderRadius: theme.radius.md,
+                        paddingVertical: theme.spacing.sm,
+                        alignItems: 'center',
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="call" size={16} color={theme.colors.white} />
+                      <Typography variant="bodyMedium" color={theme.colors.white} style={{ marginLeft: 6, fontWeight: '600' }}>
+                        Call
+                      </Typography>
+                    </TouchableOpacity>
+                  </View>
                 </Card>
               );
             })}
@@ -355,36 +355,119 @@ export default function PendingDuesScreen() {
       </ScrollView>
 
       <Modal animationType="slide" transparent visible={paymentModalVisible} onRequestClose={closePaymentModal}>
-        <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.4)', padding: theme.spacing.base }}>
-          <View style={{ backgroundColor: theme.colors.background, borderRadius: theme.radius['2xl'], padding: theme.spacing.base }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }}>
+          <View
+            style={{
+              backgroundColor: theme.colors.background,
+              borderTopLeftRadius: theme.radius.xl,
+              borderTopRightRadius: theme.radius.xl,
+              padding: theme.spacing.lg,
+              paddingBottom: theme.spacing.xl,
+            }}
+          >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
-              <Typography variant="headline2">Record Payment</Typography>
+              <Typography variant="title1" style={{ fontWeight: '600' }}>
+                Mark as Paid
+              </Typography>
               <TouchableOpacity onPress={closePaymentModal}>
-                <Ionicons name="close" size={24} color={theme.colors.text} />
+                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
               </TouchableOpacity>
             </View>
-            <Typography variant="body" color={theme.colors.textMuted} style={{ marginBottom: theme.spacing.sm }}>
-              Tenant: <Typography variant="bodyMedium">{selectedItem ? getTenant(selectedItem)?.fullName : ''}</Typography>
-            </Typography>
+
+            {selectedItem && (
+              <Card shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
+                <Typography variant="bodyMedium" style={{ fontWeight: '600' }}>
+                  {getTenant(selectedItem)?.fullName}
+                </Typography>
+                <Typography variant="caption" color={theme.colors.textMuted}>
+                  {getTenant(selectedItem)?.phone}
+                </Typography>
+                <View style={{ flexDirection: 'row', marginTop: theme.spacing.sm }}>
+                  <Typography variant="caption" color={theme.colors.textMuted}>
+                    Room {getTenant(selectedItem)?.roomNumber || getTenant(selectedItem)?.bedNumber || '-'}
+                  </Typography>
+                  <Typography variant="caption" color={theme.colors.textMuted} style={{ marginHorizontal: 8 }}>
+                    •
+                  </Typography>
+                  <Typography variant="caption" color={theme.colors.textMuted}>
+                    Bed {getTenant(selectedItem)?.bedNumber || getTenant(selectedItem)?.bedId?.slice(-4) || '-'}
+                  </Typography>
+                </View>
+              </Card>
+            )}
+
+            <View
+              style={{
+                flexDirection: 'row',
+                borderWidth: 1,
+                borderColor: theme.colors.borderLight,
+                borderRadius: theme.radius.md,
+                overflow: 'hidden',
+                marginBottom: theme.spacing.md,
+              }}
+            >
+              {[
+                { label: 'Total Amount', value: `₹${selectedItem ? (selectedItem.type === 'ledger' ? selectedItem.ledger.rentAmount : selectedItem.tenant.rentPerMonth) : 0}` },
+                { label: 'Pending', value: `₹${selectedItem ? getPendingAmount(selectedItem) : 0}` },
+              ].map((stat, index, arr) => (
+                <View
+                  key={stat.label}
+                  style={{
+                    flex: 1,
+                    paddingVertical: theme.spacing.sm,
+                    alignItems: 'center',
+                    borderRightWidth: index < arr.length - 1 ? 1 : 0,
+                    borderRightColor: theme.colors.borderLight,
+                  }}
+                >
+                  <Typography variant="caption" color={theme.colors.textMuted}>
+                    {stat.label}
+                  </Typography>
+                  <Typography variant="bodyMedium" style={{ fontWeight: '600' }}>
+                    {stat.value}
+                  </Typography>
+                </View>
+              ))}
+            </View>
+
             <Input
-              label={`Amount (pending ₹${selectedItem ? getPendingAmount(selectedItem) : 0})`}
+              label="Amount *"
               placeholder="Enter amount"
               value={paymentAmount}
               onChangeText={setPaymentAmount}
               keyboardType="numeric"
               error={amountError}
             />
-            <View style={{ flexDirection: 'row', marginTop: theme.spacing.sm }}>
-              <View style={{ flex: 1, marginRight: theme.spacing.sm }}>
+
+            <View style={{ flexDirection: 'row', marginTop: theme.spacing.sm, gap: theme.spacing.md }}>
+              <View style={{ flex: 1 }}>
                 <Button title="Cancel" variant="outline" onPress={closePaymentModal} />
               </View>
               <View style={{ flex: 1 }}>
-                <Button title="Record" loading={recordPayment.isPending} disabled={recordPayment.isPending} onPress={handlePay} />
+                <Button
+                  title="Confirm & Generate Receipt"
+                  loading={recordPayment.isPending}
+                  disabled={recordPayment.isPending}
+                  onPress={handlePay}
+                />
               </View>
             </View>
           </View>
         </View>
       </Modal>
+
+      <FilterSheet
+        visible={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        title="Sort & Filter"
+        selected={statusFilter}
+        onSelect={(v) => setStatusFilter(v)}
+        options={[
+          { label: 'All', value: 'ALL', icon: 'apps-outline' },
+          { label: 'Pending', value: 'DUE', icon: 'time-outline' },
+          { label: 'Partial', value: 'PARTIAL', icon: 'cash-outline' },
+        ]}
+      />
     </ScreenWrapper>
   );
 }
