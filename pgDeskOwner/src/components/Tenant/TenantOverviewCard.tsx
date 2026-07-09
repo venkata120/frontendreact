@@ -34,11 +34,11 @@ export const TenantOverviewCard: React.FC<Props> = ({ label, value, icon, color,
           <Ionicons name={icon} size={22} color={color} />
         </View>
         <View style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
-          <Typography variant="title2" color={color}>
-            {value}
-          </Typography>
           <Typography variant="caption" color={theme.colors.textMuted}>
             {label}
+          </Typography>
+          <Typography variant="title2" color={color}>
+            {value}
           </Typography>
         </View>
         {onPress && (

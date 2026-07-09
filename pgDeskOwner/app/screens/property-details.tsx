@@ -87,7 +87,7 @@ export default function PropertyDetailsScreen() {
           {hasProperty ? (
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => router.push({ pathname: '/screens/add-property' as any, params: { id: property.id } })}
+              onPress={() => router.push({ pathname: '/screens/add-property' as any, params: { propertyId: property.id } })}
               style={{ flexDirection: 'row', alignItems: 'center' }}
             >
               <Ionicons name="create-outline" size={18} color={theme.colors.white} />

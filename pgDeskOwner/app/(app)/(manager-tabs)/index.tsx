@@ -2,17 +2,15 @@ import { useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Image, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, SearchBar, Avatar, PgSelector } from '../../../src/components';
+import { ScreenWrapper, Typography, Card, SearchBar, HeroHeader } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
 import { useSelectedPg } from '../../../src/context/SelectedPgContext';
 import { useDashboardOverview, useNotices, useFoodMenusByProperty } from '../../../src/hooks/queries';
 import type { FoodMenu } from '../../../src/types';
-
-const HEADER_IMAGE = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800';
 
 export default function ManagerHomeScreen() {
   const theme = useTheme();
@@ -106,47 +104,15 @@ export default function ManagerHomeScreen() {
   const todayWeekday = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper edges={["bottom", "left", "right"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={{ position: 'relative' }}>
-          <Image source={{ uri: HEADER_IMAGE }} style={{ width: '100%', height: 200 }} resizeMode="cover" />
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)' }} />
-          <View
-            style={{
-              position: 'absolute',
-              top: 16,
-              left: 16,
-              right: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-              <TouchableOpacity onPress={openDrawer}>
-                <Avatar size={44} uri="" name={selectedPg?.name || user?.name} />
-              </TouchableOpacity>
-              <View style={{ marginLeft: theme.spacing.sm }}>
-                <PgSelector showCount={false} />
-              </View>
-            </View>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => router.push('/screens/notifications' as any)}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: '#FACC15',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="notifications" size={22} color={theme.colors.white} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <HeroHeader
+          avatarName={selectedPg?.name || user?.name}
+          onAvatarPress={openDrawer}
+          onNotificationPress={() => router.push('/screens/notifications' as any)}
+          showCount={false}
+          height={220}
+        />
 
         {/* Search */}
         <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.base }}>

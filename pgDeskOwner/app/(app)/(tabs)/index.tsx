@@ -1,37 +1,24 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
-import { View, Image, ScrollView, TouchableOpacity, Modal, FlatList, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, SearchBar, Avatar } from '../../../src/components';
+import { ScreenWrapper, Typography, Card, SearchBar, HeroHeader } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
 import { useSelectedPg } from '../../../src/context/SelectedPgContext';
-import { useProperties, useDashboardOverview, useAnnouncementsByPg, useFoodMenusByProperty, useDeleteFoodMenu, useDownloadProfileImage } from '../../../src/hooks/queries';
-import type { Property, FoodMenu } from '../../../src/types';
+import { useDashboardOverview, useAnnouncementsByPg, useFoodMenusByProperty, useDeleteFoodMenu } from '../../../src/hooks/queries';
+import type { FoodMenu } from '../../../src/types';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const { openDrawer } = useDrawer();
-  const { selectedPg, setSelectedPg } = useSelectedPg();
+  const { selectedPg } = useSelectedPg();
   const qc = useQueryClient();
-  const { data: properties, isLoading: propertiesLoading } = useProperties(user?.id);
-
-  useEffect(() => {
-    if (!properties || properties.length === 0) return;
-    const match = selectedPg?.id ? properties.find((p) => p.id === selectedPg.id) : undefined;
-    if (match) {
-      if (!selectedPg || selectedPg.id !== match.id || selectedPg.name !== match.name) {
-        setSelectedPg(match);
-      }
-    } else if (!selectedPg) {
-      setSelectedPg(properties[0]);
-    }
-  }, [properties, selectedPg, setSelectedPg]);
 
   const currentMonth = useMemo(() => String(new Date().getMonth() + 1).padStart(2, '0'), []);
   const currentYear = useMemo(() => String(new Date().getFullYear()), []);
@@ -44,14 +31,6 @@ export default function HomeScreen() {
   const { data: announcements, isLoading: announcementsLoading, refetch: refetchAnnouncements } = useAnnouncementsByPg(selectedPg?.id);
   const { data: foodMenus, isLoading: foodMenusLoading, refetch: refetchFoodMenus } = useFoodMenusByProperty(selectedPg?.id);
   const deleteMenu = useDeleteFoodMenu();
-
-  const { data: pgImageDownload } = useDownloadProfileImage(
-    selectedPg?.id,
-    'PG',
-    'profiles',
-    { enabled: !!selectedPg?.id }
-  );
-  const pgImageUrl = pgImageDownload?.presignedUrl;
 
   useFocusEffect(
     useCallback(() => {
@@ -126,12 +105,6 @@ export default function HomeScreen() {
   ];
 
   const [activeTab, setActiveTab] = useState<'notices' | 'food'>('food');
-  const [propertyModalVisible, setPropertyModalVisible] = useState(false);
-
-  const handleSelectPg = (pg: Property) => {
-    setSelectedPg(pg);
-    setPropertyModalVisible(false);
-  };
 
   const handleEditFoodMenu = (menu: FoodMenu) => {
     router.push({ pathname: '/screens/food-menu' as any, params: { editMenuId: menu.id } });
@@ -152,93 +125,15 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper edges={["bottom", "left", "right"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header image with overlay controls */}
-        <View style={{ position: 'relative' }}>
-          <Image
-            source={{
-              uri: pgImageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
-            }}
-            style={{ width: '100%', height: 210 }}
-            resizeMode="cover"
-          />
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.22)',
-            }}
-          />
-          <View
-            style={{
-              position: 'absolute',
-              top: 16,
-              left: 16,
-              right: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={openDrawer}>
-                <Avatar size={44} uri="" name={user?.name} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setPropertyModalVisible(true)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: theme.colors.white,
-                  borderRadius: theme.radius.full,
-                  paddingHorizontal: theme.spacing.md,
-                  paddingVertical: 8,
-                  marginLeft: theme.spacing.sm,
-                }}
-              >
-                <Typography variant="bodyMedium" style={{ fontWeight: '600' }}>
-                  {propertiesLoading ? 'Loading...' : selectedPg?.name || 'Select PG'}
-                </Typography>
-                <Ionicons name="chevron-down" size={16} color={theme.colors.text} style={{ marginLeft: 4 }} />
-                <View
-                  style={{
-                    backgroundColor: theme.colors.danger,
-                    borderRadius: theme.radius.full,
-                    minWidth: 18,
-                    height: 18,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginLeft: 6,
-                    paddingHorizontal: 4,
-                  }}
-                >
-                  <Typography variant="caption" color={theme.colors.white} style={{ fontSize: 10, lineHeight: 14 }}>
-                    {properties?.length ?? 0}
-                  </Typography>
-                </View>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => router.push('/screens/notifications' as any)}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: '#FACC15',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="notifications" size={22} color={theme.colors.white} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <HeroHeader
+          avatarName={user?.name}
+          onAvatarPress={openDrawer}
+          onNotificationPress={() => router.push('/screens/notifications' as any)}
+          showCount={true}
+          height={220}
+        />
 
         <SearchBar placeholder="Search" />
 
@@ -467,54 +362,6 @@ export default function HomeScreen() {
 
         <View style={{ height: theme.spacing.xl }} />
       </ScrollView>
-
-      {/* Property selector modal */}
-      <Modal visible={propertyModalVisible} transparent statusBarTranslucent animationType="slide" onRequestClose={() => setPropertyModalVisible(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }}>
-          <View style={{ backgroundColor: theme.colors.white, borderTopLeftRadius: theme.radius.xl, borderTopRightRadius: theme.radius.xl, paddingBottom: 24, maxHeight: '70%' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.base, borderBottomWidth: 1, borderBottomColor: theme.colors.borderLight }}>
-              <Typography variant="title1">Select Property</Typography>
-              <TouchableOpacity onPress={() => setPropertyModalVisible(false)}>
-                <Ionicons name="close" size={24} color={theme.colors.text} />
-              </TouchableOpacity>
-            </View>
-            {propertiesLoading ? (
-              <Typography variant="body" color={theme.colors.textMuted} style={{ padding: theme.spacing.base }}>Loading properties...</Typography>
-            ) : (
-              <FlatList
-                data={properties || []}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => handleSelectPg(item)}
-                    style={{
-                      padding: theme.spacing.base,
-                      borderBottomWidth: 1,
-                      borderBottomColor: theme.colors.borderLight,
-                      backgroundColor: item.id === selectedPg?.id ? theme.colors.primarySurface : theme.colors.white,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <View>
-                      <Typography variant="bodyMedium" color={item.id === selectedPg?.id ? theme.colors.primary : theme.colors.text}>{item.name}</Typography>
-                      <Typography variant="caption" color={theme.colors.textMuted}>{item.city} • {item.pgType}</Typography>
-                    </View>
-                    {item.id === selectedPg?.id && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={(
-                  <View style={{ padding: theme.spacing.base, alignItems: 'center' }}>
-                    <Typography variant="body" color={theme.colors.textMuted}>No properties found</Typography>
-                  </View>
-                )}
-              />
-            )}
-          </View>
-        </View>
-      </Modal>
     </ScreenWrapper>
   );
 }

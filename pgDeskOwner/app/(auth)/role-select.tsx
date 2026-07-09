@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Image, TouchableOpacity } from 'react-native';
 import { ScreenWrapper, Typography, Button } from '../../src/components';
@@ -28,6 +29,14 @@ export default function RoleSelectScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { selectRole } = useAuth();
+  const [isRedirecting, setIsRedirecting] = useState(true);
+
+  useEffect(() => {
+    // role-select is the post-logout fallback; send users to the animated splash screen
+    router.replace('/');
+    const timer = setTimeout(() => setIsRedirecting(false), 300);
+    return () => clearTimeout(timer);
+  }, [router]);
 
   const handleSelect = (role: UserRole) => {
     selectRole(role);
@@ -38,6 +47,12 @@ export default function RoleSelectScreen() {
     selectRole('owner');
     router.push('/(auth)/signup-owner');
   };
+
+  if (isRedirecting) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#25397C' }} />
+    );
+  }
 
   return (
     <ScreenWrapper scrollable>

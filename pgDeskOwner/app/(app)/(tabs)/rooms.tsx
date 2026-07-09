@@ -1,17 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, Avatar, PgSelector } from '../../../src/components';
+import { ScreenWrapper, Typography, Card, HeroHeader } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
 import { useSelectedPg } from '../../../src/context/SelectedPgContext';
-import { useRoomsWithBeds, useFloorsByPg, useDownloadProfileImage, useDeleteRoom } from '../../../src/hooks/queries';
+import { useRoomsWithBeds, useFloorsByPg, useDeleteRoom } from '../../../src/hooks/queries';
 import type { Room, Bed } from '../../../src/types';
-
-const HEADER_PLACEHOLDER = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800';
 
 type StatKey = 'available' | 'occupied' | 'notice' | 'prebooking';
 
@@ -36,10 +34,6 @@ export default function RoomsScreen() {
 
   const { data: roomsWithBeds, isLoading } = useRoomsWithBeds(selectedPg?.id);
   const { data: floors } = useFloorsByPg(selectedPg?.id);
-  const { data: pgImage } = useDownloadProfileImage(selectedPg?.id, 'PG', 'profiles', {
-    enabled: !!selectedPg?.id,
-  });
-
   const [activeFilter, setActiveFilter] = useState<number | 'all'>('all');
 
   const stats = useMemo(() => {
@@ -81,8 +75,6 @@ export default function RoomsScreen() {
     return ['all', ...list.sort((a, b) => a - b)] as const;
   }, [floors]);
 
-  const headerImage = pgImage?.presignedUrl || HEADER_PLACEHOLDER;
-
   const navigateToCategory = (key: StatKey) => {
     router.push({
       pathname: '/screens/bed-category',
@@ -98,48 +90,16 @@ export default function RoomsScreen() {
   };
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper edges={["bottom", "left", "right"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header image */}
-        <View style={{ position: 'relative' }}>
-          <Image source={{ uri: headerImage }} style={{ width: '100%', height: 180 }} resizeMode="cover" />
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)' }} />
-          <View
-            style={{
-              position: 'absolute',
-              top: 16,
-              left: 16,
-              right: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={openDrawer}>
-                <Avatar size={44} uri="" name={user?.name} />
-              </TouchableOpacity>
-              <View style={{ marginLeft: theme.spacing.sm }}>
-                <PgSelector />
-              </View>
-            </View>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => router.push('/screens/notifications' as any)}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: '#FACC15',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="notifications" size={22} color={theme.colors.white} />
-            </TouchableOpacity>
-          </View>
-
-        </View>
+        <HeroHeader
+          avatarUri=""
+          avatarName={user?.name}
+          onAvatarPress={openDrawer}
+          onNotificationPress={() => router.push('/screens/notifications' as any)}
+          showCount={true}
+          height={220}
+        />
 
         <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.base }}>
           {/* Total rooms */}

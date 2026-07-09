@@ -3,14 +3,13 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ScreenWrapper,
   Typography,
   SearchBar,
-  Avatar,
-  PgSelector,
+  HeroHeader,
   TenantListItem,
   TenantOverviewCard,
   FilterSheet,
@@ -21,8 +20,6 @@ import { useDrawer } from '../../../src/context/DrawerContext';
 import { useSelectedPg } from '../../../src/context/SelectedPgContext';
 import { useDashboardOverview, useTenantsByPg, useRoomsWithBeds } from '../../../src/hooks/queries';
 import type { Tenant } from '../../../src/types';
-
-const HEADER_IMAGE = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800';
 
 export default function TenantsScreen() {
   const theme = useTheme();
@@ -136,59 +133,17 @@ export default function TenantsScreen() {
   );
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper edges={["bottom", "left", "right"]}>
       <View style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={{ position: 'relative' }}>
-            <Image source={{ uri: HEADER_IMAGE }} style={{ width: '100%', height: 200 }} resizeMode="cover" />
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.28)' }} />
-            <View
-              style={{
-                position: 'absolute',
-                top: insets.top + theme.spacing.md,
-                left: theme.spacing.base,
-                right: theme.spacing.base,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <TouchableOpacity onPress={openDrawer}>
-                  <Avatar size={44} uri={user?.avatar} name={user?.name} />
-                </TouchableOpacity>
-                <View style={{ marginLeft: theme.spacing.sm }}>
-                  <PgSelector />
-                </View>
-              </View>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => router.push('/screens/notifications' as any)}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: '#FACC15',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="notifications" size={22} color={theme.colors.white} />
-              </TouchableOpacity>
-            </View>
-            <View
-              style={{
-                position: 'absolute',
-                bottom: -1,
-                left: 0,
-                right: 0,
-                height: 28,
-                backgroundColor: theme.colors.background,
-                borderTopLeftRadius: theme.radius['2xl'],
-                borderTopRightRadius: theme.radius['2xl'],
-              }}
-            />
-          </View>
+          <HeroHeader
+            avatarUri={user?.avatar}
+            avatarName={user?.name}
+            onAvatarPress={openDrawer}
+            onNotificationPress={() => router.push('/screens/notifications' as any)}
+            showCount={true}
+            height={220}
+          />
 
           <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>

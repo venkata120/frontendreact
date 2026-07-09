@@ -11,7 +11,9 @@ const getStorageKey = (userId?: string | null) =>
 interface SelectedPgContextValue {
   selectedPg: Property | null;
   selectedPgId: string | null;
+  propertyImageUri: string | null;
   setSelectedPg: (pg: Property | null) => void;
+  setPropertyImageUri: (uri: string | null) => void;
   clearSelectedPg: () => Promise<void>;
   isLoading: boolean;
 }
@@ -21,6 +23,7 @@ const SelectedPgContext = createContext<SelectedPgContextValue | undefined>(unde
 export const SelectedPgProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [selectedPg, setSelectedPgState] = useState<Property | null>(null);
+  const [propertyImageUri, setPropertyImageUriState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const storageKey = getStorageKey(user?.id);
@@ -58,6 +61,7 @@ export const SelectedPgProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const setSelectedPg = useCallback(
     (pg: Property | null) => {
       setSelectedPgState(pg);
+      setPropertyImageUriState(null);
       if (pg) {
         AsyncStorage.setItem(storageKey, JSON.stringify(pg));
       } else {
@@ -67,8 +71,13 @@ export const SelectedPgProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     [storageKey]
   );
 
+  const setPropertyImageUri = useCallback((uri: string | null) => {
+    setPropertyImageUriState(uri);
+  }, []);
+
   const clearSelectedPg = useCallback(async () => {
     setSelectedPgState(null);
+    setPropertyImageUriState(null);
     await AsyncStorage.removeItem(storageKey);
     // Also clean up the legacy global key if it exists
     await AsyncStorage.removeItem(BASE_STORAGE_KEY);
@@ -79,7 +88,9 @@ export const SelectedPgProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       value={{
         selectedPg,
         selectedPgId: selectedPg?.id || null,
+        propertyImageUri,
         setSelectedPg,
+        setPropertyImageUri,
         clearSelectedPg,
         isLoading,
       }}

@@ -3,9 +3,9 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, ScrollView, TouchableOpacity, Image, Linking, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, SearchBar, Avatar, PgSelector } from '../../../src/components';
+import { ScreenWrapper, Typography, Card, SearchBar, HeroHeader, Avatar } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
@@ -48,50 +48,16 @@ export default function StaffScreen() {
   });
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper edges={["bottom", "left", "right"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ position: 'relative' }}>
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800' }}
-            style={{ width: '100%', height: 180 }}
-            resizeMode="cover"
-          />
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.22)' }} />
-          <View
-            style={{
-              position: 'absolute',
-              top: 16,
-              left: 16,
-              right: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={openDrawer}>
-                <Avatar size={44} uri="" name={user?.name} />
-              </TouchableOpacity>
-              <View style={{ marginLeft: theme.spacing.sm }}>
-                <PgSelector />
-              </View>
-            </View>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => router.push('/screens/notifications' as any)}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: '#FACC15',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="notifications" size={22} color={theme.colors.white} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <HeroHeader
+          avatarUri=""
+          avatarName={user?.name}
+          onAvatarPress={openDrawer}
+          onNotificationPress={() => router.push('/screens/notifications' as any)}
+          showCount={true}
+          height={220}
+        />
 
         <SearchBar placeholder="Search Workers.." value={search} onChangeText={setSearch} />
 

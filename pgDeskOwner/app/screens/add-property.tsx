@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +15,7 @@ import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ScreenWrapper, Header, Typography, Card, Input, Button } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
@@ -25,6 +27,7 @@ import {
   useProperty,
   useDownloadProfileImage,
 } from '../../src/hooks/queries';
+import { profileService } from '../../src/api/services';
 import { getApiErrorMessage } from '../../src/utils/validation';
 import type { Property } from '../../src/types';
 
@@ -73,7 +76,8 @@ export default function AddPropertyScreen() {
   const { propertyId } = useLocalSearchParams<{ propertyId?: string }>();
   const isEditMode = !!propertyId;
   const { user } = useAuth();
-  const { setSelectedPg } = useSelectedPg();
+  const { setSelectedPg, setPropertyImageUri, propertyImageUri } = useSelectedPg();
+  const qc = useQueryClient();
   const createProperty = useCreateProperty();
   const updateProperty = useUpdateProperty();
   const uploadPropertyImage = useUploadPropertyImage();
@@ -149,8 +153,12 @@ export default function AddPropertyScreen() {
         fileName: 'property.jpg',
         mimeType: 'image/jpeg',
       } as ImagePicker.ImagePickerAsset);
+      // Only seed the context if no uploaded/picked URI is already present.
+      if (!propertyImageUri) {
+        setPropertyImageUri(imageUrl);
+      }
     }
-  }, [existingProperty, propertyImageDownload?.presignedUrl, reset]);
+  }, [existingProperty, propertyImageDownload?.presignedUrl, reset, setPropertyImageUri, propertyImageUri]);
 
   const toggleSharing = (n: number) => {
     setValue('maxSharing', n, { shouldValidate: true });
@@ -170,8 +178,10 @@ export default function AddPropertyScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImage(result.assets[0]);
+      const asset = result.assets[0];
+      setImage(asset);
       setHasImageChanged(true);
+      setPropertyImageUri(asset.uri);
     }
   };
 
@@ -214,7 +224,7 @@ export default function AddPropertyScreen() {
 
       if (image && (!isEditMode || hasImageChanged) && targetPropertyId) {
         try {
-          await uploadPropertyImage.mutateAsync({
+          const uploadResponse = await uploadPropertyImage.mutateAsync({
             id: targetPropertyId,
             file: {
               uri: image.uri,
@@ -222,8 +232,29 @@ export default function AddPropertyScreen() {
               type: image.mimeType || 'image/jpeg',
             },
           });
-        } catch (uploadErr) {
-          console.warn('Property image upload failed, continuing without image:', uploadErr);
+
+          // Fetch the latest presigned URL (with cache-buster) so the image is
+          // reflected immediately in HeroHeader.
+          const downloadKey = ['profiles', 'download', 'profiles', 'PG', targetPropertyId];
+          await qc.invalidateQueries({ queryKey: downloadKey });
+          const downloadData = await qc.fetchQuery({
+            queryKey: downloadKey,
+            queryFn: () => profileService.download(targetPropertyId, 'PG', 'profiles'),
+          });
+          const presignedUrl = downloadData?.presignedUrl;
+
+          if (presignedUrl) {
+            const separator = presignedUrl.includes('?') ? '&' : '?';
+            setPropertyImageUri(`${presignedUrl}${separator}t=${Date.now()}`);
+          } else if (uploadResponse?.objectUrl) {
+            setPropertyImageUri(uploadResponse.objectUrl);
+          }
+        } catch (uploadErr: any) {
+          console.warn('Property image upload failed:', uploadErr);
+          Alert.alert(
+            'Image upload failed',
+            uploadErr?.message || 'The property image could not be saved. Please try again.'
+          );
         }
       }
 

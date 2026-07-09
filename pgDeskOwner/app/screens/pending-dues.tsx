@@ -14,6 +14,7 @@ import {
   TenantOverviewCard,
   PaymentStats,
   FilterSheet,
+  Badge,
 } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
@@ -242,16 +243,18 @@ export default function PendingDuesScreen() {
             <TenantOverviewCard
               label="Pending Dues"
               value={`₹${totalPending.toLocaleString()}`}
-              icon="cash-outline"
+              icon="wallet-outline"
               color={theme.colors.warning}
               bg={theme.colors.warningSurface}
+              style={{ flex: 1 }}
             />
             <TenantOverviewCard
               label="Partial Paid"
               value={`₹${totalPartialPaid.toLocaleString()}`}
-              icon="cash-outline"
+              icon="swap-horizontal"
               color={theme.colors.success}
               bg={theme.colors.successSurface}
+              style={{ flex: 1 }}
             />
           </View>
 
@@ -287,22 +290,22 @@ export default function PendingDuesScreen() {
               const rentAmount = isLedger ? item.ledger.rentAmount : item.tenant.rentPerMonth || 0;
               const collectedAmount = isLedger ? item.ledger.collectedAmount || 0 : 0;
 
+              const displayName = tenant?.fullName || (isLedger ? 'Deleted Tenant' : 'Tenant');
+              const roomLabel = tenant?.roomNumber || tenant?.bedNumber || '-';
+
               return (
                 <Card key={isLedger ? item.ledger.id : item.tenant.id} shadow="md" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: theme.spacing.sm }}>
                       <Avatar uri={tenant?.avatar} name={tenant?.fullName} size={48} />
-                      <View style={{ marginLeft: theme.spacing.md }}>
-                        <Typography variant="title2">{tenant?.fullName || 'Tenant'}</Typography>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                          <Ionicons name="bed-outline" size={12} color={theme.colors.primary} />
-                          <Typography variant="caption" color={theme.colors.primary} style={{ marginLeft: 4 }}>
-                            Room {tenant?.roomNumber || tenant?.bedNumber || '-'}
-                          </Typography>
+                      <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
+                        <Typography variant="title2">{displayName}</Typography>
+                        <View style={{ marginTop: 4 }}>
+                          <Badge label={`Room ${roomLabel}`} variant="primary" />
                         </View>
                       </View>
                     </View>
-                    <Typography variant="title2" color={theme.colors.warning}>
+                    <Typography variant="title1" color={theme.colors.warning} style={{ fontWeight: '700' }}>
                       ₹{pending.toLocaleString()}
                     </Typography>
                   </View>
@@ -317,14 +320,14 @@ export default function PendingDuesScreen() {
                       style={{
                         flex: 1,
                         backgroundColor: theme.colors.success,
-                        borderRadius: theme.radius.md,
+                        borderRadius: theme.radius.full,
                         paddingVertical: theme.spacing.sm,
                         alignItems: 'center',
                         flexDirection: 'row',
                         justifyContent: 'center',
                       }}
                     >
-                      <Ionicons name="checkmark-circle" size={16} color={theme.colors.white} />
+                      <Ionicons name="checkmark-circle" size={18} color={theme.colors.white} />
                       <Typography variant="bodyMedium" color={theme.colors.white} style={{ marginLeft: 6, fontWeight: '600' }}>
                         Mark as Paid
                       </Typography>
@@ -332,17 +335,18 @@ export default function PendingDuesScreen() {
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => handleCall(tenant?.phone)}
+                      disabled={!tenant?.phone}
                       style={{
                         flex: 1,
-                        backgroundColor: theme.colors.primary,
-                        borderRadius: theme.radius.md,
+                        backgroundColor: tenant?.phone ? theme.colors.primary : theme.colors.border,
+                        borderRadius: theme.radius.full,
                         paddingVertical: theme.spacing.sm,
                         alignItems: 'center',
                         flexDirection: 'row',
                         justifyContent: 'center',
                       }}
                     >
-                      <Ionicons name="call" size={16} color={theme.colors.white} />
+                      <Ionicons name="call" size={18} color={theme.colors.white} />
                       <Typography variant="bodyMedium" color={theme.colors.white} style={{ marginLeft: 6, fontWeight: '600' }}>
                         Call
                       </Typography>
@@ -377,21 +381,27 @@ export default function PendingDuesScreen() {
             {selectedItem && (
               <Card shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
                 <Typography variant="bodyMedium" style={{ fontWeight: '600' }}>
-                  {getTenant(selectedItem)?.fullName}
+                  {getTenant(selectedItem)?.fullName || (selectedItem.type === 'ledger' ? 'Deleted Tenant' : 'Tenant')}
                 </Typography>
-                <Typography variant="caption" color={theme.colors.textMuted}>
-                  {getTenant(selectedItem)?.phone}
-                </Typography>
+                {getTenant(selectedItem)?.phone && (
+                  <Typography variant="caption" color={theme.colors.textMuted}>
+                    {getTenant(selectedItem)?.phone}
+                  </Typography>
+                )}
                 <View style={{ flexDirection: 'row', marginTop: theme.spacing.sm }}>
                   <Typography variant="caption" color={theme.colors.textMuted}>
                     Room {getTenant(selectedItem)?.roomNumber || getTenant(selectedItem)?.bedNumber || '-'}
                   </Typography>
-                  <Typography variant="caption" color={theme.colors.textMuted} style={{ marginHorizontal: 8 }}>
-                    •
-                  </Typography>
-                  <Typography variant="caption" color={theme.colors.textMuted}>
-                    Bed {getTenant(selectedItem)?.bedNumber || getTenant(selectedItem)?.bedId?.slice(-4) || '-'}
-                  </Typography>
+                  {getTenant(selectedItem)?.bedNumber && (
+                    <>
+                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginHorizontal: 8 }}>
+                        •
+                      </Typography>
+                      <Typography variant="caption" color={theme.colors.textMuted}>
+                        Bed {getTenant(selectedItem)?.bedNumber}
+                      </Typography>
+                    </>
+                  )}
                 </View>
               </Card>
             )}
