@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { View, Image, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,9 +8,14 @@ import { ScreenWrapper, Typography, Button, Input, Header } from '../../src/comp
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 
+const mobileRegex = /^[6-9]\d{9}$/;
+
 const schema = z.object({
-  email: z.string().email('Enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  mobile: z
+    .string()
+    .min(10, 'Enter a valid 10-digit mobile number')
+    .max(10, 'Enter a valid 10-digit mobile number')
+    .regex(mobileRegex, 'Mobile number must start with 6-9 and contain 10 digits'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -18,72 +23,64 @@ type FormData = z.infer<typeof schema>;
 export default function LoginScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { login, loading, error, resetError } = useAuth();
+  const { sendOtp, otpLoading, error, resetError } = useAuth();
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { mobile: '' },
   });
 
   const onSubmit = async (data: FormData) => {
     resetError();
     try {
-      await login(data.email, data.password, 'tenant');
-      router.replace('/(app)/(tabs)');
+      await sendOtp(data.mobile);
+      router.push({ pathname: '/(auth)/otp', params: { mobile: data.mobile } });
     } catch {
       // error handled by auth slice
     }
   };
 
   return (
-    <ScreenWrapper avoidKeyboard>
+    <ScreenWrapper avoidKeyboard scrollable>
       <Header onBack={() => router.back()} />
       <View style={{ flex: 1, paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg }}>
         <Typography variant="headline2" align="center">
           Welcome back Tenant!
         </Typography>
-        <Typography variant="body" align="center" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm }}>
-          Login to your tenant account
+        <Typography
+          variant="body"
+          align="center"
+          color={theme.colors.textMuted}
+          style={{ marginTop: theme.spacing.sm }}
+        >
+          Enter your Mobile Number. We will send you OTP to verify
         </Typography>
 
-        <View style={{ alignItems: 'center', marginVertical: theme.spacing['3xl'] }}>
-          <Image
-            source={{ uri: 'https://img.freepik.com/free-vector/mobile-login-concept-illustration_114360-83.jpg' }}
-            style={{ width: 260, height: 200 }}
-            resizeMode="contain"
-          />
-        </View>
-
         <Controller
           control={control}
-          name="email"
+          name="mobile"
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              autoCapitalize="none"
+              placeholder="Enter your mobile number"
+              keyboardType="phone-pad"
+              maxLength={10}
               value={value}
-              onChangeText={onChange}
+              onChangeText={(text) => onChange(text.replace(/\D/g, '').slice(0, 10))}
               onBlur={onBlur}
-              error={errors.email?.message}
-              leftIcon={<Ionicons name="mail-outline" size={20} color={theme.colors.textMuted} />}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="password"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              placeholder="Enter your password"
-              secureTextEntry
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.password?.message}
-              leftIcon={<Ionicons name="lock-closed-outline" size={20} color={theme.colors.textMuted} />}
-              containerStyle={{ marginTop: theme.spacing.sm }}
+              error={errors.mobile?.message}
+              leftIcon={
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="call-outline" size={20} color={theme.colors.textMuted} />
+                  <Typography
+                    variant="bodyMedium"
+                    color={theme.colors.text}
+                    style={{ marginLeft: theme.spacing.sm, marginRight: theme.spacing.xs }}
+                  >
+                    +91
+                  </Typography>
+                </View>
+              }
+              containerStyle={{ marginTop: theme.spacing['3xl'] }}
             />
           )}
         />
@@ -95,11 +92,29 @@ export default function LoginScreen() {
         )}
 
         <Button
-          title="Login"
-          loading={loading}
+          title="Send OTP"
+          loading={otpLoading}
           onPress={handleSubmit(onSubmit)}
           style={{ marginTop: theme.spacing.lg }}
         />
+
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: theme.spacing.lg,
+          }}
+        >
+          <Typography variant="body" color={theme.colors.textMuted}>
+            Don't have an account?{' '}
+          </Typography>
+          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+            <Typography variant="body" color={theme.colors.primary} weight="600">
+              Sign Up
+            </Typography>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScreenWrapper>
   );

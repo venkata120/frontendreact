@@ -76,8 +76,8 @@ export default function ManageAllPermissionsScreen() {
           paddingHorizontal: theme.spacing.base,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, marginRight: theme.spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: theme.spacing.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: theme.spacing.md }}>
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)')}
@@ -106,7 +106,7 @@ export default function ManageAllPermissionsScreen() {
               paddingHorizontal: theme.spacing.sm,
               paddingVertical: 6,
               borderRadius: theme.radius.md,
-              minWidth: 72,
+              minWidth: 64,
             }}
           >
             <Ionicons name="refresh" size={14} color={theme.colors.white} />

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Image, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
@@ -7,11 +8,12 @@ import { ScreenWrapper, Typography, Button, Input, Header } from '../../src/comp
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 import { getRoleBasedRoute } from '../../src/utils/roleRouting';
-import { useEffect } from 'react';
 
 const schema = z.object({
-  email: z.string().email('Enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  mobile: z
+    .string()
+    .min(1, 'Mobile number is required')
+    .regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -19,17 +21,18 @@ type FormData = z.infer<typeof schema>;
 export default function LoginScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { login, loading, error, resetError, isAuthenticated, userRole } = useAuth();
+  const { sendOtp, otpLoading, error, resetError, isAuthenticated, userRole } = useAuth();
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { mobile: '' },
   });
 
   const onSubmit = async (data: FormData) => {
     resetError();
     try {
-      await login(data.email, data.password);
+      await sendOtp(data.mobile);
+      router.push({ pathname: '/(auth)/otp', params: { mobile: data.mobile } });
     } catch {
       // handled by redux
     }
@@ -58,43 +61,30 @@ export default function LoginScreen() {
           </View>
 
           <Typography variant="headline2" align="center">
-            Welcome Back !
+            Welcome Back!
           </Typography>
           <Typography variant="body" align="center" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing['3xl'] }}>
-            Login to manage your property
+            Enter your Mobile Number. We will send you OTP to verify
           </Typography>
 
           <Controller
             control={control}
-            name="email"
+            name="mobile"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                placeholder="Enter your email"
-                keyboardType="email-address"
-                autoCapitalize="none"
+                placeholder="Enter mobile number"
+                keyboardType="phone-pad"
+                maxLength={10}
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
-                error={errors.email?.message}
-                leftIcon="mail-outline"
+                error={errors.mobile?.message}
+                leftIcon={(
+                  <Typography variant="bodyMedium" color={theme.colors.text}>
+                    +91
+                  </Typography>
+                )}
                 containerStyle={{ marginBottom: theme.spacing.md }}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="password"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                placeholder="Enter your password"
-                secureTextEntry
-                enableVisibilityToggle
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.password?.message}
-                leftIcon="lock-closed-outline"
               />
             )}
           />
@@ -106,8 +96,8 @@ export default function LoginScreen() {
           )}
 
           <Button
-            title="Login"
-            loading={loading}
+            title="Send OTP"
+            loading={otpLoading}
             onPress={handleSubmit(onSubmit)}
             style={{ marginTop: theme.spacing.lg }}
           />

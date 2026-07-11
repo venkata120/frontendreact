@@ -57,6 +57,28 @@ export interface RefreshRequest {
   refreshToken: string;
 }
 
+export interface SendOtpRequest {
+  mobile: string;
+  isTenant: boolean;
+}
+
+export interface VerifyOtpRequest {
+  mobile: string;
+  otp: string;
+  reqId: string;
+  isTenant: boolean;
+}
+
+export interface ResendOtpRequest {
+  reqId: string;
+  retryChannel: string;
+}
+
+export interface OtpDispatchResponse {
+  reqId: string;
+  message: string;
+}
+
 // ------------------------------------------------------------------
 // Users
 // ------------------------------------------------------------------

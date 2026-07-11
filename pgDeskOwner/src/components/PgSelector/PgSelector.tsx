@@ -116,33 +116,38 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
             <FlatList
               data={properties || []}
               keyExtractor={(item) => item.id}
-              renderItem={({ item }: { item: Property }) => (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => handleSelect(item)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingVertical: theme.spacing.md,
-                    borderBottomWidth: 1,
-                    borderBottomColor: theme.colors.border,
-                  }}
-                >
-                  <Ionicons
-                    name={item.id === selectedPg?.id ? 'radio-button-on' : 'radio-button-off'}
-                    size={20}
-                    color={theme.colors.primary}
-                  />
-                  <View style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
-                    <Typography variant="bodyMedium" color={theme.colors.text} style={{ fontWeight: '500' }}>
-                      {item.name}
-                    </Typography>
-                    <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1}>
-                      {item.address}, {item.city}
-                    </Typography>
-                  </View>
-                </TouchableOpacity>
-              )}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: theme.spacing.md }}
+              renderItem={({ item }: { item: Property }) => {
+                const subtitle = [item.address, item.city].filter(Boolean).join(', ') || `ID: ${item.id.slice(-8).toUpperCase()}`;
+                return (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => handleSelect(item)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: theme.spacing.md,
+                      borderBottomWidth: 1,
+                      borderBottomColor: theme.colors.border,
+                    }}
+                  >
+                    <Ionicons
+                      name={item.id === selectedPg?.id ? 'radio-button-on' : 'radio-button-off'}
+                      size={20}
+                      color={theme.colors.primary}
+                    />
+                    <View style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
+                      <Typography variant="bodyMedium" color={theme.colors.text} style={{ fontWeight: '500' }}>
+                        {item.name}
+                      </Typography>
+                      <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1}>
+                        {subtitle}
+                      </Typography>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
             />
               </View>
             </TouchableWithoutFeedback>

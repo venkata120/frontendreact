@@ -39,6 +39,9 @@ export const propertiesService = {
     if (session?.accessToken) {
       headers.Authorization = `${session.tokenType || 'Bearer'} ${session.accessToken}`;
     }
+    if (session?.userId) {
+      headers['X-USER-ID'] = session.userId;
+    }
 
     const response = await fetch(`${API_URL}/api/v1/profiles/upload`, {
       method: 'POST',

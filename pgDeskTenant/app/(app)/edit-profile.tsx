@@ -18,13 +18,15 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useTenant } from '../../src/context/TenantContext';
 import { useTenantDetails } from '../../src/hooks/queries/useTenant';
 import { useUpdateTenant } from '../../src/hooks/queries/useUpdateTenant';
+import { profileService } from '../../src/services/profile';
+import type { Tenant } from '../../src/types';
 import { Ionicons } from '@expo/vector-icons';
 
 const schema = z.object({
   name: z.string().min(2, 'Full name is required').max(50, 'Name is too long'),
-  phone: z.string().regex(/^\d{10}$/, 'Enter a valid 10-digit mobile number'),
+  phone: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'),
   parentName: z.string().min(2, 'Parent name is required').max(50, 'Parent name is too long'),
-  parentPhone: z.string().regex(/^\d{10}$/, 'Enter a valid 10-digit mobile number'),
+  parentPhone: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -36,6 +38,8 @@ export default function EditProfileScreen() {
   const { data: tenantDetails, isLoading } = useTenantDetails(tenantId ?? undefined);
   const updateTenant = useUpdateTenant();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const initialValuesRef = useRef<FormData | null>(null);
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -49,42 +53,78 @@ export default function EditProfileScreen() {
 
   useEffect(() => {
     if (tenantDetails) {
-      reset({
+      const initial = {
         name: tenantDetails.fullName || '',
         phone: tenantDetails.phone?.replace(/\D/g, '').slice(-10) || '',
         parentName: tenantDetails.parentName || '',
         parentPhone: tenantDetails.parentPhone?.replace(/\D/g, '').slice(-10) || '',
-      });
+      };
+      reset(initial);
+      initialValuesRef.current = initial;
       setPhotoUri(tenantDetails.avatar || null);
     }
   }, [tenantDetails, reset]);
 
   const pickImage = async () => {
+    if (!tenantId) {
+      Alert.alert('Error', 'Tenant ID is missing');
+      return;
+    }
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission required', 'Please allow access to photos to update your profile image.');
       return;
     }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: false,
       quality: 0.8,
     });
+
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setPhotoUri(result.assets[0].uri);
+      const asset = result.assets[0];
+      setPhotoUri(asset.uri);
+      setUploadingPhoto(true);
+      try {
+        const uploadRes = await profileService.upload(
+          {
+            uri: asset.uri,
+            name: asset.fileName || 'profile.jpg',
+            type: asset.mimeType || 'image/jpeg',
+          },
+          'TENANT',
+          tenantId,
+          'profiles'
+        );
+        setPhotoUri(uploadRes.objectUrl);
+      } catch (err: any) {
+        Alert.alert('Upload failed', err?.message || 'Failed to upload profile photo');
+      } finally {
+        setUploadingPhoto(false);
+      }
     }
   };
 
   const onSubmit = async (data: FormData) => {
     if (!tenantId) return;
+
+    const initial = initialValuesRef.current;
+    const payload: Partial<Tenant> = {};
+
+    if (!initial || data.name !== initial.name) payload.fullName = data.name;
+    if (!initial || data.phone !== initial.phone) payload.phone = `+91${data.phone}`;
+    if (!initial || data.parentName !== initial.parentName) payload.parentName = data.parentName;
+    if (!initial || data.parentPhone !== initial.parentPhone) payload.parentPhone = `+91${data.parentPhone}`;
+    if (photoUri && photoUri !== tenantDetails?.avatar) payload.avatar = photoUri;
+
+    if (Object.keys(payload).length === 0) {
+      Alert.alert('No changes', 'No profile changes to save.');
+      return;
+    }
+
     try {
-      const payload: Partial<typeof tenantDetails> = {
-        fullName: data.name,
-        phone: `+91${data.phone}`,
-        parentName: data.parentName,
-        parentPhone: `+91${data.parentPhone}`,
-        avatar: photoUri || undefined,
-      };
       await updateTenant.mutateAsync({ id: tenantId, payload });
       Alert.alert('Success', 'Profile updated successfully', [{ text: 'OK', onPress: () => router.back() }]);
     } catch (err: any) {
@@ -160,15 +200,19 @@ export default function EditProfileScreen() {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={pickImage}
+                  disabled={uploadingPhoto}
                   style={{
                     backgroundColor: theme.colors.primary,
                     borderRadius: theme.radius.full,
                     paddingVertical: 10,
                     paddingHorizontal: theme.spacing.xl,
                     marginTop: theme.spacing.md,
+                    opacity: uploadingPhoto ? 0.7 : 1,
                   }}
                 >
-                  <Typography variant="bodyMedium" color={theme.colors.white} style={{ fontWeight: '600' }}>Retake Photo</Typography>
+                  <Typography variant="bodyMedium" color={theme.colors.white} style={{ fontWeight: '600' }}>
+                    {uploadingPhoto ? 'Uploading...' : 'Retake Photo'}
+                  </Typography>
                 </TouchableOpacity>
               </View>
 
@@ -199,7 +243,7 @@ export default function EditProfileScreen() {
         <Button
           title="Save Changes"
           loading={updateTenant.isPending}
-          disabled={updateTenant.isPending || isLoading}
+          disabled={updateTenant.isPending || isLoading || uploadingPhoto}
           leftIcon={<Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />}
           onPress={handleSubmit(onSubmit)}
         />

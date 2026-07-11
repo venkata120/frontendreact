@@ -3,7 +3,7 @@
 // ------------------------------------------------------------------
 
 export type UserRole = 'owner' | 'manager' | 'tenant';
-export type BackendUserRole = 'OWNER' | 'MANAGER' | 'ADMIN';
+export type BackendUserRole = 'OWNER' | 'MANAGER' | 'ADMIN' | 'TENANT';
 
 export type TenantStatus = 'ACTIVE' | 'EXITED';
 export type RentStatus = 'PAID' | 'PARTIAL' | 'DUE';
@@ -64,6 +64,28 @@ export interface Session {
 
 export interface RefreshRequest {
   refreshToken: string;
+}
+
+export interface SendOtpRequest {
+  mobile: string;
+  isTenant: boolean;
+}
+
+export interface VerifyOtpRequest {
+  mobile: string;
+  otp: string;
+  reqId: string;
+  isTenant: boolean;
+}
+
+export interface ResendOtpRequest {
+  reqId: string;
+  retryChannel: string;
+}
+
+export interface OtpDispatchResponse {
+  reqId: string;
+  message: string;
 }
 
 // ------------------------------------------------------------------

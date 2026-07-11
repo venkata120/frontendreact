@@ -20,10 +20,10 @@ import {
   Input,
   Button,
   PgSelector,
-  DatePicker,
   DaySelector,
   getRepeatLabel,
 } from '../../src/components';
+import { DatePicker } from '../../src/components/DatePicker/DatePicker';
 import { useTheme } from '../../src/hooks/useTheme';
 
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
@@ -498,33 +498,14 @@ export default function FoodMenuScreen() {
                     const mealMenus = dateMenus.filter((m) => m.mealType === meal.value);
                     return (
                       <View key={meal.value} style={{ marginBottom: theme.spacing.md }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.sm }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Ionicons name={meal.icon} size={18} color={meal.color} />
-                            <Typography variant="bodyMedium" color={theme.colors.text} style={{ marginLeft: theme.spacing.sm, fontWeight: '600' }}>
-                              {meal.label}
-                            </Typography>
-                            <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: theme.spacing.sm }}>
-                              ({meal.time})
-                            </Typography>
-                          </View>
-                          <TouchableOpacity
-                            activeOpacity={0.8}
-                            onPress={() => openAddMenu(meal.value, date)}
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              backgroundColor: theme.colors.primary,
-                              paddingHorizontal: theme.spacing.sm,
-                              paddingVertical: 4,
-                              borderRadius: theme.radius.md,
-                            }}
-                          >
-                            <Ionicons name="add" size={14} color={theme.colors.white} />
-                            <Typography variant="caption" color={theme.colors.white} style={{ marginLeft: 2, fontWeight: '600' }}>
-                              Add Item
-                            </Typography>
-                          </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm }}>
+                          <Ionicons name={meal.icon} size={18} color={meal.color} />
+                          <Typography variant="bodyMedium" color={theme.colors.text} style={{ marginLeft: theme.spacing.sm, fontWeight: '600' }}>
+                            {meal.label}
+                          </Typography>
+                          <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: theme.spacing.sm }}>
+                            ({meal.time})
+                          </Typography>
                         </View>
                         {mealMenus.length === 0 ? (
                           <Typography variant="caption" color={theme.colors.textMuted} style={{ marginBottom: theme.spacing.sm }}>
@@ -573,7 +554,7 @@ export default function FoodMenuScreen() {
         visible={menuModalVisible}
         onRequestClose={closeMenuModal}
       >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.72)' }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <View
             style={{
               backgroundColor: theme.colors.background,
@@ -616,34 +597,38 @@ export default function FoodMenuScreen() {
                   </Typography>
                 ) : null}
 
-                <Typography variant="bodyMedium" color={theme.colors.text} style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.xs }}>
-                  Menu Date
-                </Typography>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => setDatePickerVisible(true)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: theme.spacing.md,
-                    paddingVertical: theme.spacing.sm,
-                    borderRadius: theme.radius.md,
-                    borderWidth: 1,
-                    borderColor: errors.menuDate ? theme.colors.danger : theme.colors.border,
-                    backgroundColor: theme.colors.backgroundSecondary,
-                  }}
-                >
-                  <Ionicons name="calendar" size={18} color={theme.colors.primary} />
-                  <Typography variant="bodyMedium" color={theme.colors.text} style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
-                    {form.menuDate ? dayjs(form.menuDate).format('dddd, DD MMM YYYY') : 'Select date'}
-                  </Typography>
-                  <Ionicons name="chevron-down" size={16} color={theme.colors.textMuted} />
-                </TouchableOpacity>
-                {errors.menuDate ? (
-                  <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.xs }}>
-                    {errors.menuDate}
-                  </Typography>
-                ) : null}
+                {form.menuType === 'SPECIAL' && (
+                  <>
+                    <Typography variant="bodyMedium" color={theme.colors.text} style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.xs }}>
+                      Menu Date
+                    </Typography>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setDatePickerVisible(true)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingHorizontal: theme.spacing.md,
+                        paddingVertical: theme.spacing.sm,
+                        borderRadius: theme.radius.md,
+                        borderWidth: 1,
+                        borderColor: errors.menuDate ? theme.colors.danger : theme.colors.border,
+                        backgroundColor: theme.colors.backgroundSecondary,
+                      }}
+                    >
+                      <Ionicons name="calendar" size={18} color={theme.colors.primary} />
+                      <Typography variant="bodyMedium" color={theme.colors.text} style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
+                        {form.menuDate ? dayjs(form.menuDate).format('dddd, DD MMM YYYY') : 'Select date'}
+                      </Typography>
+                      <Ionicons name="chevron-down" size={16} color={theme.colors.textMuted} />
+                    </TouchableOpacity>
+                    {errors.menuDate ? (
+                      <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.xs }}>
+                        {errors.menuDate}
+                      </Typography>
+                    ) : null}
+                  </>
+                )}
 
                 <Typography variant="bodyMedium" color={theme.colors.text} style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.xs }}>
                   Menu Type
@@ -671,23 +656,27 @@ export default function FoodMenuScreen() {
                 </Typography>
                 {renderOptionButton(REPEAT_OPTIONS, form.repeatType, (value) => handleRepeatTypeChange(value as RepeatType))}
 
-                <Typography variant="bodyMedium" color={theme.colors.text} style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.xs }}>
-                  Repeat Days
-                </Typography>
-                <DaySelector
-                  selectedDays={form.repeatDays || []}
-                  onChange={(days) => updateField('repeatDays', days)}
-                />
-                {errors.repeatDays ? (
-                  <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.xs }}>
-                    {errors.repeatDays}
-                  </Typography>
-                ) : null}
-                {form.repeatDays && form.repeatDays.length > 0 ? (
-                  <Typography variant="caption" color={theme.colors.primary} style={{ marginTop: theme.spacing.xs, fontWeight: '600' }}>
-                    {getRepeatLabel(form.repeatDays)}
-                  </Typography>
-                ) : null}
+                {form.repeatType === 'CUSTOM' && (
+                  <>
+                    <Typography variant="bodyMedium" color={theme.colors.text} style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.xs }}>
+                      Repeat Days
+                    </Typography>
+                    <DaySelector
+                      selectedDays={form.repeatDays || []}
+                      onChange={(days) => updateField('repeatDays', days)}
+                    />
+                    {errors.repeatDays ? (
+                      <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.xs }}>
+                        {errors.repeatDays}
+                      </Typography>
+                    ) : null}
+                    {form.repeatDays && form.repeatDays.length > 0 ? (
+                      <Typography variant="caption" color={theme.colors.primary} style={{ marginTop: theme.spacing.xs, fontWeight: '600' }}>
+                        {getRepeatLabel(form.repeatDays)}
+                      </Typography>
+                    ) : null}
+                  </>
+                )}
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: theme.spacing.lg, marginBottom: theme.spacing.sm }}>
                   <Typography variant="bodyMedium" color={theme.colors.text} style={{ fontWeight: '600' }}>

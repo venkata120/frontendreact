@@ -23,9 +23,8 @@ import {
   Card,
   ScreenHeader,
   SuccessModal,
-  ContactPickerModal,
-  DatePicker,
 } from '../../src/components';
+import { DatePicker } from '../../src/components/DatePicker/DatePicker';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useCreateTenant, useUpdateBedStatus } from '../../src/hooks/queries';
 import { useRoomsWithBeds } from '../../src/hooks/queries/useRoomsWithBeds';
@@ -158,7 +157,7 @@ export default function AddTenantScreen() {
   const [selectedBedId, setSelectedBedId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [contactModalOpen, setContactModalOpen] = useState(false);
+
   const [successOpen, setSuccessOpen] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
 
@@ -190,11 +189,6 @@ export default function AddTenantScreen() {
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setPhotoUri(result.assets[0].uri);
     }
-  };
-
-  const onContactSelect = (contact: { name: string; phone?: string }) => {
-    setValue('fullName', contact.name);
-    if (contact.phone) setValue('phone', contact.phone);
   };
 
   const onSubmit = async (data: FormData) => {
@@ -237,8 +231,8 @@ export default function AddTenantScreen() {
       />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }} keyboardShouldPersistTaps="handled">
-          <View style={{ paddingHorizontal: theme.spacing.base }}>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }} keyboardShouldPersistTaps="handled">
+          <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.xl }}>
             <Card shadow="lg" padding={theme.spacing.lg}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
                 <Ionicons name="camera" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
@@ -317,11 +311,7 @@ export default function AddTenantScreen() {
                       onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))}
                       error={errors.phone?.message}
                       leftIcon="call-outline"
-                      rightIcon={
-                        <TouchableOpacity activeOpacity={0.8} onPress={() => setContactModalOpen(true)}>
-                          <Ionicons name="people-outline" size={20} color={theme.colors.primary} />
-                        </TouchableOpacity>
-                      }
+
                     />
                   </View>
                 )}
@@ -442,12 +432,6 @@ export default function AddTenantScreen() {
           <View style={{ height: theme.spacing.xl }} />
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <ContactPickerModal
-        visible={contactModalOpen}
-        onClose={() => setContactModalOpen(false)}
-        onSelect={onContactSelect}
-      />
 
       <SuccessModal
         visible={successOpen}

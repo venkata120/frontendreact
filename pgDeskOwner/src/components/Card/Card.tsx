@@ -7,6 +7,7 @@ interface Props extends ViewProps {
   shadow?: 'none' | 'sm' | 'md' | 'lg';
   borderRadius?: number;
   padding?: number;
+  minHeight?: number;
 }
 
 export const Card: React.FC<Props> = ({
@@ -14,6 +15,7 @@ export const Card: React.FC<Props> = ({
   shadow = 'md',
   borderRadius,
   padding,
+  minHeight,
   style,
   ...rest
 }) => {
@@ -26,6 +28,7 @@ export const Card: React.FC<Props> = ({
           backgroundColor: theme.colors.card,
           borderRadius: borderRadius ?? theme.radius.lg,
           padding: padding ?? theme.spacing.base,
+          minHeight,
           ...theme.shadows[shadow],
         },
         style,

@@ -56,6 +56,20 @@ export default function AddExpenseScreen() {
 
   const selectedMaster = useMemo(() => masterOptions.find((m) => m.value === selectedMasterId), [masterOptions, selectedMasterId]);
 
+  const handleMonthChange = (text: string, onChange: (v: string) => void) => {
+    let v = text.replace(/\D/g, '').slice(0, 2);
+    if (v.length === 2) {
+      const n = Number(v);
+      if (n > 12) v = '12';
+      if (n < 1) v = '01';
+    }
+    onChange(v);
+  };
+
+  const handleYearChange = (text: string, onChange: (v: string) => void) => {
+    onChange(text.replace(/\D/g, '').slice(0, 4));
+  };
+
   const onSubmit = async (data: FormData) => {
     if (!selectedPgId) return;
     if (!selectedMasterId) {
@@ -142,10 +156,10 @@ export default function AddExpenseScreen() {
               <Input label="Amount *" placeholder="Enter amount" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.amount?.message} leftIcon="cash-outline" />
             )} />
             <Controller control={control} name="expenseMonth" render={({ field }) => (
-              <Input label="Month (MM) *" placeholder="MM" maxLength={2} value={field.value} onChangeText={field.onChange} error={errors.expenseMonth?.message} leftIcon="calendar-outline" />
+              <Input label="Month (MM) *" placeholder="MM" maxLength={2} keyboardType="numeric" value={field.value} onChangeText={(text) => handleMonthChange(text, field.onChange)} error={errors.expenseMonth?.message} leftIcon="calendar-outline" />
             )} />
             <Controller control={control} name="expenseYear" render={({ field }) => (
-              <Input label="Year (YYYY) *" placeholder="YYYY" maxLength={4} keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.expenseYear?.message} leftIcon="calendar-outline" />
+              <Input label="Year (YYYY) *" placeholder="YYYY" maxLength={4} keyboardType="numeric" value={field.value} onChangeText={(text) => handleYearChange(text, field.onChange)} error={errors.expenseYear?.message} leftIcon="calendar-outline" />
             )} />
             <Controller control={control} name="notes" render={({ field }) => (
               <Input label="Notes" placeholder="Enter notes" value={field.value} onChangeText={field.onChange} error={errors.notes?.message} leftIcon="document-text-outline" />

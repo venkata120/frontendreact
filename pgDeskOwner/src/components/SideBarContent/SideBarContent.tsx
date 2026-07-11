@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, TouchableOpacity, Image, Share } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Image, Share, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography, Avatar } from '../';
 import { useTheme } from '../../hooks/useTheme';
@@ -197,7 +197,19 @@ export const SideBarContent: React.FC<Props> = ({ onClose }) => {
             activeOpacity={0.8}
             onPress={() => {
               onClose?.();
-              signOut();
+              Alert.alert(
+                'Logout',
+                'Are you sure you want to logout?',
+                [
+                  { text: 'No', style: 'cancel' },
+                  {
+                    text: 'Yes',
+                    onPress: async () => {
+                      await signOut();
+                    },
+                  },
+                ]
+              );
             }}
             style={{
               backgroundColor: theme.colors.danger,

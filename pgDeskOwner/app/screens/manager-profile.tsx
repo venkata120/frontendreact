@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, ProfileImagePicker } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
@@ -11,6 +12,7 @@ export default function ManagerProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { selectedPg } = useSelectedPg();
+  const qc = useQueryClient();
   const { data: assignments, isLoading, refetch } = useManagerAssignmentsByPg(selectedPg?.id);
   const removeManager = useRemoveManager();
 
@@ -28,7 +30,9 @@ export default function ManagerProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             await removeManager.mutateAsync({ managerId: assignment.managerId, pgId: assignment.pgId });
-            refetch();
+            await qc.invalidateQueries({ queryKey: ['managers'] });
+            await refetch();
+            Alert.alert('Removed', 'Manager has been removed successfully');
           },
         },
       ]
@@ -92,22 +96,28 @@ export default function ManagerProfileScreen() {
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%', marginTop: theme.spacing.lg }}>
                 {[
                   { label: 'Last Login', value: '—', icon: 'phone-portrait', color: '#A855F7' },
-                  { label: 'Tenants Added', value: '—', icon: 'people', color: '#22C55E' },
-                  { label: 'Collected Payments', value: '—', icon: 'cash', color: '#22C55E' },
-                  { label: 'Vacates', value: '—', icon: 'exit', color: '#F97316' },
+                  { label: 'Tenants Added', value: '—', icon: 'people', color: '#22C55E', route: '/(app)/(tabs)/tenants' },
+                  { label: 'Collected Payments', value: '—', icon: 'cash', color: '#22C55E', route: '/screens/collected-amount' },
+                  { label: 'Vacates', value: '—', icon: 'exit', color: '#F97316', route: '/screens/left-tenants-profile' },
                 ].map((stat) => (
                   <TouchableOpacity
                     key={stat.label}
                     activeOpacity={0.8}
-                    onPress={() => Alert.alert(stat.label, 'Manager statistics will be available in a future update.')}
+                    onPress={() => {
+                      if (stat.route) {
+                        router.push(stat.route as any);
+                      } else {
+                        Alert.alert(stat.label, 'Manager statistics will be available in a future update.');
+                      }
+                    }}
                     style={{ width: '48%', marginBottom: theme.spacing.md }}
                   >
-                    <Card shadow="sm" padding={theme.spacing.sm} style={{ minHeight: 72, justifyContent: 'center' }}>
+                    <Card shadow="sm" padding={theme.spacing.sm} minHeight={72} style={{ justifyContent: 'center' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Ionicons name={stat.icon as any} size={20} color={stat.color} style={{ marginRight: 8 }} />
                         <View style={{ flex: 1 }}>
-                          <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1}>{stat.label}</Typography>
-                          <Typography variant="bodyMedium" style={{ fontWeight: '600' }} numberOfLines={1}>{stat.value}</Typography>
+                          <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1} ellipsizeMode="tail">{stat.label}</Typography>
+                          <Typography variant="bodyMedium" style={{ fontWeight: '600' }} numberOfLines={1} ellipsizeMode="tail">{stat.value}</Typography>
                         </View>
                       </View>
                     </Card>

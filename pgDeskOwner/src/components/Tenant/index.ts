@@ -7,4 +7,3 @@ export { PaymentStats } from './PaymentStats';
 export { FilterSheet } from './FilterSheet';
 export { SuccessModal } from './SuccessModal';
 export { ConfirmDialog } from './ConfirmDialog';
-export { ContactPickerModal } from './ContactPickerModal';

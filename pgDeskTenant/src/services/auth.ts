@@ -1,8 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authService } from '../api/services';
+import { authService, tenantsService, usersService } from '../api/services';
 import { setSession, clearSession, getSession } from '../api/client';
 import { Storage } from './storage';
-import type { AuthRequest, Session, UserRole, BackendUserRole } from '../types';
+import type {
+  AuthRequest,
+  OtpDispatchResponse,
+  Session,
+  User,
+  UserRole,
+  BackendUserRole,
+} from '../types';
 
 const SELECTED_TENANT_KEY = '@pgdesk/selected-tenant';
 const ROLE_KEY = '@pgdesk/role';
@@ -31,6 +38,67 @@ export const AuthService = {
       await Storage.setString(ROLE_KEY, payload.role);
     }
     return session;
+  },
+
+  async sendOtp(mobile: string): Promise<OtpDispatchResponse> {
+    return authService.sendOtp({ mobile, isTenant: true });
+  },
+
+  async resendOtp(reqId: string): Promise<OtpDispatchResponse> {
+    return authService.resendOtp({ reqId, retryChannel: 'SMS' });
+  },
+
+  async verifyOtpAndLogin(
+    mobile: string,
+    otp: string,
+    reqId: string
+  ): Promise<{ session: Session; user: User }> {
+    const response = await authService.verifyOtp({ mobile, otp, reqId, isTenant: true });
+
+    const session: Session = {
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      tokenType: response.tokenType || 'Bearer',
+      userId: response.userId,
+      userName: response.userName,
+      userRole: response.userRole,
+    };
+
+    await setSession(session);
+    await Storage.setString(ROLE_KEY, mapBackendRole(session.userRole));
+
+    const user = await AuthService.fetchUserForSession(session);
+    return { session, user };
+  },
+
+  async fetchUserForSession(session: Session): Promise<User> {
+    const role = mapBackendRole(session.userRole);
+    if (role === 'tenant') {
+      try {
+        const tenant = await tenantsService.getById(session.userId);
+        return {
+          id: tenant.id,
+          name: tenant.fullName,
+          email: tenant.email || '',
+          role: 'tenant',
+          active: tenant.status === 'ACTIVE',
+          mobile: tenant.phone,
+          createdAt: tenant.createdAt,
+          updatedAt: tenant.updatedAt,
+        };
+      } catch {
+        // Fall back to a minimal user built from the session so login still
+        // succeeds even if the tenant profile endpoint is unreachable.
+        return {
+          id: session.userId,
+          name: session.userName,
+          email: '',
+          role: 'tenant',
+          active: true,
+        };
+      }
+    }
+    return usersService.getById(session.userId);
   },
 
   async refreshSession(): Promise<Session | null> {

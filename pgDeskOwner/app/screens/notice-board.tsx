@@ -11,9 +11,9 @@ import {
   SearchBar,
   Input,
   Button,
-  DatePicker,
   PgSelector,
 } from '../../src/components';
+import { DatePicker } from '../../src/components/DatePicker/DatePicker';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useSelectedPg } from '../../src/context/SelectedPgContext';

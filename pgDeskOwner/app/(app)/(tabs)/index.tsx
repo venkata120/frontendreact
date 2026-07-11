@@ -157,7 +157,8 @@ export default function HomeScreen() {
                 <Card
                   shadow="sm"
                   padding={theme.spacing.md}
-                  style={{ minHeight: 90, justifyContent: 'center' }}
+                  minHeight={100}
+                  style={{ justifyContent: 'center' }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <View
@@ -176,7 +177,7 @@ export default function HomeScreen() {
                       <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1} ellipsizeMode="tail">
                         {item.label}
                       </Typography>
-                      <Typography variant="title2" color={item.color} numberOfLines={1}>
+                      <Typography variant="title2" color={item.color} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit>
                         {item.value}
                       </Typography>
                     </View>

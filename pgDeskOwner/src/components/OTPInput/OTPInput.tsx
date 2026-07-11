@@ -9,7 +9,7 @@ interface Props {
   disabled?: boolean;
 }
 
-export const OTPInput: React.FC<Props> = ({ length = 4, value, onChange, disabled = false }) => {
+export const OTPInput: React.FC<Props> = ({ length = 6, value, onChange, disabled = false }) => {
   const theme = useTheme();
   const [focusedIndex, setFocusedIndex] = useState(0);
   const inputsRef = useRef<(TextInput | null)[]>([]);

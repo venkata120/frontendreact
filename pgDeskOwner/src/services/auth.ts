@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../api/services';
 import { setSession, clearSession, getSession } from '../api/client';
 import { Storage } from './storage';
-import type { AuthRequest, Session, UserRole, BackendUserRole } from '../types';
+import type { AuthRequest, Session, UserRole, BackendUserRole, OtpDispatchResponse } from '../types';
 
 const SELECTED_PG_KEY = '@pgdesk/selected-pg';
 
@@ -66,5 +66,31 @@ export const AuthService = {
 
   async setRole(role: UserRole): Promise<void> {
     await Storage.setString(ROLE_KEY, role);
+  },
+
+  async sendOtp(mobile: string): Promise<OtpDispatchResponse> {
+    return authService.sendOtp({ mobile, isTenant: false });
+  },
+
+  async verifyOtpAndLogin(
+    mobile: string,
+    otp: string,
+    reqId: string
+  ): Promise<{ session: Session; userId: string }> {
+    const response = await authService.verifyOtp({ mobile, otp, reqId, isTenant: false });
+    const session: Session = {
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      tokenType: response.tokenType || 'Bearer',
+      userId: response.userId,
+      userName: response.userName,
+      userRole: response.userRole,
+    };
+    await setSession(session);
+    return { session, userId: session.userId };
+  },
+
+  async resendOtp(reqId: string, retryChannel = 'SMS'): Promise<OtpDispatchResponse> {
+    return authService.resendOtp({ reqId, retryChannel });
   },
 };

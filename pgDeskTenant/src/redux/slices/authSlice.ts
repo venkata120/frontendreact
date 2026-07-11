@@ -14,6 +14,9 @@ interface AuthState {
   loading: boolean;
   error: string | null;
   role: UserRole | null;
+  otpReqId: string | null;
+  otpMobile: string | null;
+  otpLoading: boolean;
 }
 
 const initialState: AuthState = {
@@ -27,6 +30,9 @@ const initialState: AuthState = {
   loading: false,
   error: null,
   role: null,
+  otpReqId: null,
+  otpMobile: null,
+  otpLoading: false,
 };
 
 const hydrateFromSession = (state: AuthState, session: Session) => {
@@ -74,8 +80,8 @@ export const loadSession = createAsyncThunk('auth/loadSession', async (_, { reje
       await AuthService.logout();
       return null;
     }
-    const fullUser = await usersService.getById(session.userId);
-    return { session, user: fullUser };
+    const user = await AuthService.fetchUserForSession(session);
+    return { session, user };
   } catch (error: any) {
     return rejectWithValue(error?.response?.data?.message || error.message || 'Session load failed');
   }
@@ -84,6 +90,47 @@ export const loadSession = createAsyncThunk('auth/loadSession', async (_, { reje
 export const logout = createAsyncThunk('auth/logout', async () => {
   await AuthService.logout();
 });
+
+export const sendOtp = createAsyncThunk(
+  'auth/sendOtp',
+  async (mobile: string, { rejectWithValue }) => {
+    try {
+      return await AuthService.sendOtp(mobile);
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error.message || 'Failed to send OTP');
+    }
+  }
+);
+
+export const verifyOtp = createAsyncThunk(
+  'auth/verifyOtp',
+  async (
+    payload: { mobile: string; otp: string; reqId: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const { session, user } = await AuthService.verifyOtpAndLogin(
+        payload.mobile,
+        payload.otp,
+        payload.reqId
+      );
+      return { session, user };
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error.message || 'OTP verification failed');
+    }
+  }
+);
+
+export const resendOtp = createAsyncThunk(
+  'auth/resendOtp',
+  async (reqId: string, { rejectWithValue }) => {
+    try {
+      return await AuthService.resendOtp(reqId);
+    } catch (error: any) {
+      return rejectWithValue(error?.response?.data?.message || error.message || 'Failed to resend OTP');
+    }
+  }
+);
 
 const authSlice = createSlice({
   name: 'auth',
@@ -129,6 +176,46 @@ const authSlice = createSlice({
       .addCase(loadSession.rejected, (state) => {
         state.loading = false;
         state.isAuthenticated = false;
+      })
+      .addCase(sendOtp.pending, (state) => {
+        state.otpLoading = true;
+        state.error = null;
+      })
+      .addCase(sendOtp.fulfilled, (state, action) => {
+        state.otpLoading = false;
+        state.otpReqId = action.payload.reqId;
+        state.otpMobile = action.meta.arg;
+      })
+      .addCase(sendOtp.rejected, (state, action) => {
+        state.otpLoading = false;
+        state.error = (action.payload as string) || 'Failed to send OTP';
+      })
+      .addCase(verifyOtp.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(verifyOtp.fulfilled, (state, action) => {
+        state.loading = false;
+        hydrateFromSession(state, action.payload.session);
+        state.user = action.payload.user
+          ? { ...action.payload.user, role: mapBackendRole(action.payload.user.role as any) }
+          : state.user;
+      })
+      .addCase(verifyOtp.rejected, (state, action) => {
+        state.loading = false;
+        state.error = (action.payload as string) || 'OTP verification failed';
+      })
+      .addCase(resendOtp.pending, (state) => {
+        state.otpLoading = true;
+        state.error = null;
+      })
+      .addCase(resendOtp.fulfilled, (state, action) => {
+        state.otpLoading = false;
+        state.otpReqId = action.payload.reqId;
+      })
+      .addCase(resendOtp.rejected, (state, action) => {
+        state.otpLoading = false;
+        state.error = (action.payload as string) || 'Failed to resend OTP';
       });
   },
 });

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -61,9 +61,10 @@ export default function StaffManagementScreen() {
   return (
     <ScreenWrapper>
       <Header title="Staff Management" onBack={() => router.back()} />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ padding: theme.spacing.base }}>
-          <Card shadow="lg" padding={theme.spacing.lg}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: theme.spacing.xl }}>
+          <View style={{ padding: theme.spacing.base }}>
+            <Card shadow="lg" padding={theme.spacing.lg}>
             <Typography variant="title1" style={{ marginBottom: theme.spacing.md }}>Add Staff</Typography>
 
             <Controller control={control} name="name" render={({ field }) => (
@@ -85,9 +86,10 @@ export default function StaffManagementScreen() {
             {error && (
               <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.sm }}>{error}</Typography>
             )}
-          </Card>
-        </View>
-      </ScrollView>
+            </Card>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={{ padding: theme.spacing.base }}>
         <Button

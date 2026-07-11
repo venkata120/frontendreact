@@ -102,7 +102,12 @@ export default function StaffScreen() {
           {isLoading && <Typography variant="body" color={theme.colors.textMuted}>Loading...</Typography>}
 
           {filtered?.map((member) => (
-            <Card key={member.id} shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
+            <TouchableOpacity
+              key={member.id}
+              activeOpacity={0.9}
+              onPress={() => router.push({ pathname: '/screens/manager-profile' as any, params: { managerId: member.id } })}
+            >
+              <Card shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Avatar uri="" name={member.name} size={56} />
                 <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
@@ -181,7 +186,8 @@ export default function StaffScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-            </Card>
+              </Card>
+            </TouchableOpacity>
           ))}
         </View>
 

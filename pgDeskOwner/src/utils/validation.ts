@@ -21,9 +21,10 @@ export const messages = {
 
 export const normalizeMobile = (mobile: string): string => {
   const digits = mobile.replace(/\D/g, '');
-  if (mobile.trim().startsWith('+')) return mobile.trim();
-  if (digits.length === 10) return `+91${digits}`;
-  return `+${digits}`;
+  // Keep the last 10 digits so the stored value matches the 10-digit login
+  // format expected by the OTP endpoint.
+  if (digits.length > 10) return digits.slice(-10);
+  return digits;
 };
 
 export const getApiErrorMessage = (err: any, fallback = 'Something went wrong'): string => {

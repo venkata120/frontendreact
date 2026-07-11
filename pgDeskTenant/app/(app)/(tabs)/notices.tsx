@@ -122,8 +122,8 @@ export default function NoticesScreen() {
         <Typography variant="headline2" color={theme.colors.white}>Notice Board</Typography>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
-        <View style={{ paddingHorizontal: theme.spacing.base }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }}>
+        <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={{ flex: 1, marginRight: theme.spacing.sm }}>
               <SearchBar placeholder="Search notices..." value={search} onChangeText={setSearch} />
