@@ -136,7 +136,7 @@ export default function ManagerHomeScreen() {
                   onPress={() => item.route && router.push(item.route as any)}
                   style={{ width: '48%', marginBottom: theme.spacing.md }}
                 >
-                  <Card shadow="sm" padding={theme.spacing.md}>
+                  <Card shadow="sm" padding={theme.spacing.md} minHeight={108} style={{ justifyContent: 'center' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View
                         style={{
@@ -150,9 +150,9 @@ export default function ManagerHomeScreen() {
                       >
                         <Ionicons name={item.icon} size={24} color={item.color} />
                       </View>
-                      <View style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
-                        <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1}>{item.label}</Typography>
-                        <Typography variant="title2" color={item.color} numberOfLines={1}>{item.value}</Typography>
+                      <View style={{ marginLeft: theme.spacing.sm, flex: 1, flexShrink: 1 }}>
+                        <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1} ellipsizeMode="tail">{item.label}</Typography>
+                        <Typography variant="title2" color={item.color} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit>{item.value}</Typography>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
                     </View>

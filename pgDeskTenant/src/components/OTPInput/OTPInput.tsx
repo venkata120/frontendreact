@@ -11,8 +11,8 @@ interface Props {
 
 export const OTPInput: React.FC<Props> = ({ length = 6, value, onChange, disabled = false }) => {
   const theme = useTheme();
-  const [focusedIndex, setFocusedIndex] = useState(0);
-  const inputsRef = useRef<Array<TextInput | null>>([]);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const inputsRef = useRef<(TextInput | null)[]>([]);
 
   const values = value.split('').slice(0, length);
   while (values.length < length) values.push('');
@@ -60,6 +60,7 @@ export const OTPInput: React.FC<Props> = ({ length = 6, value, onChange, disable
             backgroundColor: theme.colors.background,
             textAlign: 'center',
             textAlignVertical: 'center',
+            paddingVertical: 0,
             fontFamily: theme.fontFamilies.secondary,
             fontSize: theme.fontSizes['2xl'],
             color: theme.colors.text,

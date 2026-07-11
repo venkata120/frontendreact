@@ -28,7 +28,7 @@ export const Avatar: React.FC<Props> = ({ uri, name, size = 48, style }) => {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: theme.colors.primarySurface,
+          backgroundColor: theme.colors.primaryDark,
           overflow: 'hidden',
           alignItems: 'center',
           justifyContent: 'center',
@@ -39,7 +39,7 @@ export const Avatar: React.FC<Props> = ({ uri, name, size = 48, style }) => {
       {uri ? (
         <Image source={{ uri }} style={{ width: size, height: size }} resizeMode="cover" />
       ) : (
-        <Typography variant="bodyMedium" color={theme.colors.primary}>
+        <Typography variant="bodyMedium" color={theme.colors.white}>
           {initials}
         </Typography>
       )}

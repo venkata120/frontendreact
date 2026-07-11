@@ -60,7 +60,11 @@ export const Header: React.FC<Props> = ({
           )}
         </View>
       </View>
-      {rightAction && <View>{rightAction}</View>}
+      {rightAction && (
+        <View style={{ marginLeft: theme.spacing.sm, minWidth: 44, alignItems: 'flex-end' }}>
+          {rightAction}
+        </View>
+      )}
     </View>
   );
 };

@@ -8,5 +8,6 @@ export { SearchBar } from './SearchBar/SearchBar';
 export { OTPInput } from './OTPInput/OTPInput';
 export { ScreenWrapper } from './ScreenWrapper/ScreenWrapper';
 export { Typography } from './Typography/Typography';
+export { DatePicker } from './DatePicker/DatePicker';
 export { ThemeProvider } from './providers/ThemeProvider';
 export { AppProviders } from './providers/AppProviders';

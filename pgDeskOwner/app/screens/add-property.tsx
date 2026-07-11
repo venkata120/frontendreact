@@ -45,9 +45,12 @@ const schema = z
     pgType: z.enum(['MEN', 'LADIES', 'CO_LIVE'], { message: 'Type of hostel is required' }),
     maxSharing: z.number().min(1, 'Select number of sharing').max(5),
     prices: z.record(z.string(), z.string()),
-    advanceAmount: z.string().min(1, 'Advance amount is required'),
-    city: z.string().min(1, 'City is required'),
-    address: z.string().min(1, 'Hostel address is required'),
+    advanceAmount: z
+      .string()
+      .min(1, 'Advance amount is required')
+      .max(8, 'Advance amount is too large'),
+    city: z.string().min(1, 'City is required').max(50, 'City name is too long'),
+    address: z.string().min(1, 'Hostel address is required').max(200, 'Address is too long'),
     numberOfFloors: z
       .string()
       .min(1, 'Number of floors is required')
@@ -85,6 +88,7 @@ export default function AddPropertyScreen() {
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [hasImageChanged, setHasImageChanged] = useState(false);
   const imageInitialized = useRef(false);
+  const priceInputRefs = useRef<Record<string, TextInput | null>>({});
 
   useEffect(() => {
     imageInitialized.current = false;
@@ -261,10 +265,7 @@ export default function AddPropertyScreen() {
       if (isEditMode) {
         router.replace('/(app)/(tabs)');
       } else {
-        router.replace({
-          pathname: '/screens/add-property',
-          params: { propertyId: targetPropertyId },
-        });
+        router.replace('/(app)/(tabs)');
       }
     } catch {
       // error surfaced by mutation
@@ -432,6 +433,7 @@ export default function AddPropertyScreen() {
                       ₹
                     </Typography>
                     <TextInput
+                      ref={(el) => { priceInputRefs.current[String(n)] = el; }}
                       value={prices[String(n)] || ''}
                       onChangeText={(v) => updatePrice(n, v)}
                       keyboardType="number-pad"
@@ -450,7 +452,10 @@ export default function AddPropertyScreen() {
                     <Typography variant="caption" color={theme.colors.textMuted} style={{ marginRight: theme.spacing.md }}>
                       /month
                     </Typography>
-                    <TouchableOpacity activeOpacity={0.8} onPress={() => { /* keep field editable */ }}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => priceInputRefs.current[String(n)]?.focus()}
+                    >
                       <Typography variant="bodyMedium" color={theme.colors.primary}>
                         Edit
                       </Typography>
@@ -467,6 +472,9 @@ export default function AddPropertyScreen() {
               {/* Advance Amount */}
               <Typography variant="bodyMedium" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
                 Advance Amount
+              </Typography>
+              <Typography variant="caption" color={theme.colors.textMuted} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                Security deposit collected from tenants
               </Typography>
               <Controller
                 control={control}

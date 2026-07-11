@@ -102,6 +102,8 @@ export const useCreateBed = () => {
       qc.invalidateQueries({ queryKey: [bedsKey, 'room', vars.roomId] });
       // Beds are shown inside the room list, so refresh room queries as well
       qc.invalidateQueries({ queryKey: [roomsKey] });
+      // Dashboard occupancy/counts depend on beds
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -113,6 +115,8 @@ export const useUpdateBedStatus = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [bedsKey] });
       qc.invalidateQueries({ queryKey: [roomsKey] });
+      // Occupancy and tenant counts on the dashboard depend on bed status
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -124,6 +128,7 @@ export const useDeleteBed = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [bedsKey] });
       qc.invalidateQueries({ queryKey: [roomsKey] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };

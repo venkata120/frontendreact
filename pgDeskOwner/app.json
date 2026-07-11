@@ -37,6 +37,7 @@
       },
       "versionCode": 2,
       "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.pgdesk.owner"
     },
     "web": {

@@ -18,7 +18,7 @@ export default function OTPScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { mobile } = useLocalSearchParams<{ mobile?: string }>();
-  const { verifyOtp, resendOtp, sendOtp, otpReqId, otpLoading, loading, error, resetError } = useAuth();
+  const { verifyOtp, resendOtp, otpReqId, otpLoading, loading, error, resetError } = useAuth();
 
   const [otp, setOtp] = useState('');
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN_SECONDS);

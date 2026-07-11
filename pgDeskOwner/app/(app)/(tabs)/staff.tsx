@@ -47,6 +47,19 @@ export default function StaffScreen() {
     return matchesSearch && matchesDept;
   });
 
+  const handleCall = async (phone?: string) => {
+    if (!phone) {
+      Alert.alert('No phone number', 'This staff member does not have a phone number.');
+      return;
+    }
+    const url = `tel:${phone}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Error', 'Could not open phone dialer');
+    }
+  };
+
   return (
     <ScreenWrapper edges={["bottom", "left", "right"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -102,29 +115,31 @@ export default function StaffScreen() {
           {isLoading && <Typography variant="body" color={theme.colors.textMuted}>Loading...</Typography>}
 
           {filtered?.map((member) => (
-            <TouchableOpacity
-              key={member.id}
-              activeOpacity={0.9}
-              onPress={() => router.push({ pathname: '/screens/manager-profile' as any, params: { managerId: member.id } })}
-            >
-              <Card shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
+            <Card key={member.id} shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Avatar uri="" name={member.name} size={56} />
-                <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
-                  <Typography variant="title3">{member.name}</Typography>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                    <Ionicons name="call-outline" size={12} color={theme.colors.textMuted} />
-                    <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: 4 }}>{member.mobile || '-'}</Typography>
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => router.push({ pathname: '/screens/manager-profile' as any, params: { managerId: member.id } })}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+                >
+                  <Avatar uri="" name={member.name} size={56} />
+                  <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
+                    <Typography variant="title3">{member.name}</Typography>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                      <Ionicons name="call-outline" size={12} color={theme.colors.textMuted} />
+                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: 4 }}>{member.mobile || '-'}</Typography>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                      <Ionicons name="person-outline" size={12} color={theme.colors.textMuted} />
+                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: 4 }}>Manager</Typography>
+                    </View>
+                    <Typography variant="bodyMedium" color={theme.colors.accentPurple} style={{ marginTop: theme.spacing.xs }}>
+                      {member.email}
+                    </Typography>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                    <Ionicons name="person-outline" size={12} color={theme.colors.textMuted} />
-                    <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: 4 }}>Manager</Typography>
-                  </View>
-                  <Typography variant="bodyMedium" color={theme.colors.accentPurple} style={{ marginTop: theme.spacing.xs }}>
-                    {member.email}
-                  </Typography>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
+                </TouchableOpacity>
+
+                <View style={{ alignItems: 'flex-end', marginLeft: theme.spacing.sm }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm }}>
                     <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: member.active ? theme.colors.success : theme.colors.textMuted, marginRight: 4 }} />
                     <Typography variant="caption" color={member.active ? theme.colors.success : theme.colors.textMuted}>{member.active ? 'Active' : 'Inactive'}</Typography>
@@ -133,6 +148,7 @@ export default function StaffScreen() {
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => router.push({ pathname: '/screens/edit-manager' as any, params: { id: member.id } })}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       style={{
                         width: 32,
                         height: 32,
@@ -161,6 +177,7 @@ export default function StaffScreen() {
                           ]
                         );
                       }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       style={{
                         width: 32,
                         height: 32,
@@ -175,19 +192,22 @@ export default function StaffScreen() {
                   </View>
                   <TouchableOpacity
                     activeOpacity={0.8}
-                    onPress={async () => {
-                      if (!member.mobile) return;
-                      const url = `tel:${member.mobile}`;
-                      const supported = await Linking.canOpenURL(url);
-                      if (supported) await Linking.openURL(url);
+                    onPress={() => handleCall(member.mobile)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: theme.colors.primarySurface,
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    <Ionicons name="call" size={22} color={theme.colors.primary} />
+                    <Ionicons name="call" size={16} color={theme.colors.primary} />
                   </TouchableOpacity>
                 </View>
               </View>
-              </Card>
-            </TouchableOpacity>
+            </Card>
           ))}
         </View>
 

@@ -49,6 +49,7 @@ export const ROUTES = {
     EXPENSES_LIST: '/screens/expenses-list',
     FOOD_MESS_CHARGES: '/screens/food-mess-charges',
     UTILITY_CHARGES: '/screens/utility-charges',
+    INCOME: '/screens/income',
     ACCESS_REQUESTS: '/screens/access-requests',
     PAYMENTS_SALARY_HISTORY: '/screens/payments-salary-history',
     NOTICE_BOARD: '/screens/notice-board',

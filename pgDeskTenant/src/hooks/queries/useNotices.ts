@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { noticesService } from '../../api/services';
 import type { NoticeBoardSearchRequest } from '../../types';
 
@@ -9,5 +9,15 @@ export const useNotices = (payload?: NoticeBoardSearchRequest) => {
     queryKey: [key, 'search', payload],
     queryFn: () => noticesService.search(payload || {}),
     enabled: !!payload?.propertyId,
+  });
+};
+
+export const useArchiveNotice = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => noticesService.archive(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [key, 'search'] });
+    },
   });
 };

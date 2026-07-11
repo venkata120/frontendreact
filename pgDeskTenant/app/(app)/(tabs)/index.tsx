@@ -14,7 +14,7 @@ const QUICK_ACTIONS = [
   { icon: 'wallet-outline', label: 'My Dues', route: '/(app)/pending-dues' },
   { icon: 'restaurant-outline', label: 'Food Menu', route: '/(app)/(tabs)/menu' },
   { icon: 'document-text-outline', label: 'Notices', route: '/(app)/(tabs)/notices' },
-  { icon: 'chatbubble-outline', label: 'Support', route: '/(app)/screens/support' },
+  { icon: 'chatbubble-outline', label: 'Support', route: '/screens/support' },
 ];
 
 export default function TenantHomeScreen() {
@@ -25,10 +25,10 @@ export default function TenantHomeScreen() {
   const navigateOnce = useCallback((route: string) => {
     if (navigating.current) return;
     navigating.current = true;
-    router.push(route as any);
+    router.navigate(route as any);
     setTimeout(() => {
       navigating.current = false;
-    }, 500);
+    }, 1000);
   }, [router]);
   const { user } = useAuth();
   const { tenantId, propertyId } = useTenant();
@@ -61,6 +61,7 @@ export default function TenantHomeScreen() {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigateOnce('/screens/notifications')}
+              accessibilityLabel="Notifications"
               style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FACC15', alignItems: 'center', justifyContent: 'center' }}
             >
               <Ionicons name="notifications" size={22} color={theme.colors.white} />

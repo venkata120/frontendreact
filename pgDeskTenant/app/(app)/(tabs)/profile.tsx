@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useRef, useCallback } from 'react';
 import { View, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Avatar, Button } from '../../../src/components';
@@ -12,14 +13,24 @@ const MENU_ITEMS = [
   { icon: 'create-outline', label: 'Edit Profile', route: '/(app)/edit-profile' },
   { icon: 'wallet-outline', label: 'My Dues', route: '/(app)/pending-dues' },
   { icon: 'notifications-outline', label: 'Notifications', route: '/screens/notifications' },
-  { icon: 'help-circle-outline', label: 'Help & Support', route: '/(app)/screens/support' },
+  { icon: 'help-circle-outline', label: 'Help & Support', route: '/screens/support' },
   { icon: 'list-outline', label: 'All Screens', route: '/(app)/all-screens' },
 ];
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const navigating = useRef(false);
   const { user, signOut } = useAuth();
+
+  const navigateOnce = useCallback((route: string) => {
+    if (navigating.current) return;
+    navigating.current = true;
+    router.navigate(route as any);
+    setTimeout(() => {
+      navigating.current = false;
+    }, 1000);
+  }, [router]);
   const { tenantId } = useTenant();
   const { data: tenantDetails, isLoading } = useTenantDetails(tenantId ?? undefined);
 
@@ -130,7 +141,7 @@ export default function ProfileScreen() {
 
           {/* Menu */}
           {MENU_ITEMS.map((item) => (
-            <TouchableOpacity key={item.label} activeOpacity={0.8} onPress={() => item.route && router.push(item.route as any)}>
+            <TouchableOpacity key={item.label} activeOpacity={0.8} onPress={() => item.route && navigateOnce(item.route)}>
               <Card shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>

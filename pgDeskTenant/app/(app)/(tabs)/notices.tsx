@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, SearchBar } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useTenant } from '../../../src/context/TenantContext';
-import { useNotices } from '../../../src/hooks/queries/useNotices';
+import { useNotices, useArchiveNotice } from '../../../src/hooks/queries/useNotices';
 import { formatDate } from '../../../src/utils/formatters';
 import type { NoticeBoard, NoticeType } from '../../../src/types';
 
@@ -36,44 +36,54 @@ export default function NoticesScreen() {
   const theme = useTheme();
   const { propertyId } = useTenant();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<NoticeType | 'ALL'>('ALL');
   const [readIds, setReadIds] = useState<Set<number>>(new Set());
   const [pinnedIds, setPinnedIds] = useState<Set<number>>(new Set());
   const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
 
-  const { data: noticesResponse, isLoading } = useNotices(
-    propertyId
-      ? {
-          propertyId,
-          audienceType: 'ALL_TENANTS',
-          status: 'ACTIVE',
-          size: 50,
-          sortDirection: 'DESC',
-        }
-      : undefined
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const searchPayload = useMemo(
+    () =>
+      propertyId
+        ? {
+            propertyId,
+            audienceType: 'ALL_TENANTS' as const,
+            status: 'ACTIVE' as const,
+            noticeType: typeFilter !== 'ALL' ? typeFilter : undefined,
+            title: debouncedSearch.trim() || undefined,
+            size: 50,
+            sortDirection: 'DESC' as const,
+          }
+        : undefined,
+    [propertyId, typeFilter, debouncedSearch]
   );
 
-  const notices = noticesResponse?.notices || [];
+  const { data: noticesResponse, isLoading, refetch } = useNotices(searchPayload);
+  const archiveNotice = useArchiveNotice();
 
   const filtered = useMemo(() => {
-    let result = notices.filter((n) => !deletedIds.has(n.id));
-    if (typeFilter !== 'ALL') {
-      result = result.filter((n) => n.noticeType === typeFilter);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
+    const q = search.trim().toLowerCase();
+    const result = (noticesResponse?.notices || [])
+      .filter((n) => !deletedIds.has(n.id))
+      .filter((n) => typeFilter === 'ALL' || n.noticeType === typeFilter)
+      .filter(
         (n) =>
+          !q ||
           n.title.toLowerCase().includes(q) ||
-          n.description.toLowerCase().includes(q)
+          n.description.toLowerCase().includes(q) ||
+          n.senderType.toLowerCase().includes(q)
       );
-    }
     return [
       ...result.filter((n) => pinnedIds.has(n.id)),
       ...result.filter((n) => !pinnedIds.has(n.id)),
     ];
-  }, [notices, typeFilter, search, deletedIds, pinnedIds]);
+  }, [noticesResponse, deletedIds, pinnedIds, typeFilter, search]);
 
   const toggleRead = (notice: NoticeBoard) => {
     setReadIds((prev) => {
@@ -99,12 +109,20 @@ export default function NoticesScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () =>
-          setDeletedIds((prev) => {
-            const next = new Set(prev);
-            next.add(notice.id);
-            return next;
-          }),
+        onPress: async () => {
+          try {
+            setDeletedIds((prev) => new Set(prev).add(notice.id));
+            await archiveNotice.mutateAsync(notice.id);
+            refetch();
+          } catch (err: any) {
+            setDeletedIds((prev) => {
+              const next = new Set(prev);
+              next.delete(notice.id);
+              return next;
+            });
+            Alert.alert('Error', err?.response?.data?.message || err?.message || 'Failed to delete notice');
+          }
+        },
       },
     ]);
   };
@@ -122,7 +140,10 @@ export default function NoticesScreen() {
         <Typography variant="headline2" color={theme.colors.white}>Notice Board</Typography>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: theme.spacing.md, paddingBottom: theme.spacing.xl }}
+      >
         <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={{ flex: 1, marginRight: theme.spacing.sm }}>
@@ -152,7 +173,7 @@ export default function NoticesScreen() {
             <ActivityIndicator />
           ) : filtered.length === 0 ? (
             <Typography variant="body" color={theme.colors.textMuted} align="center" style={{ marginVertical: theme.spacing.lg }}>
-              No notices found
+              {search.trim() || typeFilter !== 'ALL' ? 'No notices match your search.' : 'No notices found'}
             </Typography>
           ) : (
             filtered.map((notice) => {

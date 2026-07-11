@@ -63,6 +63,7 @@ export default function AppLayout() {
       <Stack.Screen name="screens/expenses-list" />
       <Stack.Screen name="screens/food-mess-charges" />
       <Stack.Screen name="screens/utility-charges" />
+      <Stack.Screen name="screens/income" />
     </Stack>
   );
 }

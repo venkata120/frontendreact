@@ -24,7 +24,7 @@ export const useCreateNotice = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateNoticePayload) => noticesService.create(payload),
-    onSuccess: (_, vars) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: [key, 'search'] });
     },
   });
@@ -46,7 +46,7 @@ export const useArchiveNotice = () => {
   return useMutation({
     mutationFn: (id: number) => noticesService.archive(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [key] });
+      qc.invalidateQueries({ queryKey: [key, 'search'] });
     },
   });
 };

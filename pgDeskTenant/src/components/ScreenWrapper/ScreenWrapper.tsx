@@ -41,6 +41,8 @@ export const ScreenWrapper: React.FC<Props> = ({
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       {...scrollProps}
     >
       {children}

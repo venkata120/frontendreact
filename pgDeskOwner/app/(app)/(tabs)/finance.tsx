@@ -304,7 +304,7 @@ export default function FinanceScreen() {
 
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  onPress={() => router.push(ROUTES.SCREENS.COLLECTED_AMOUNT as any)}
+                  onPress={() => router.push(ROUTES.SCREENS.INCOME as any)}
                   style={{
                     backgroundColor: theme.colors.success,
                     borderRadius: theme.radius.full,

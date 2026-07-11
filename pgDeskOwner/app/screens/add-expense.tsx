@@ -25,7 +25,12 @@ const schema = z.object({
   expenseYear: z
     .string()
     .min(1, messages.required('Year'))
-    .regex(/^\d{4}$/, 'Year must be 4 digits'),
+    .regex(/^\d{4}$/, 'Year must be 4 digits')
+    .refine((v) => {
+      const n = Number(v);
+      const currentYear = new Date().getFullYear();
+      return n >= 1900 && n <= currentYear;
+    }, `Year must be between 1900 and ${new Date().getFullYear()}`),
   notes: z.string().optional(),
 });
 
@@ -43,6 +48,7 @@ export default function AddExpenseScreen() {
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    mode: 'onChange',
     defaultValues: {
       expenseMonth: new Date().toISOString().slice(5, 7),
       expenseYear: String(new Date().getFullYear()),
@@ -51,7 +57,12 @@ export default function AddExpenseScreen() {
 
   const masterOptions = useMemo(() => {
     if (!masters) return [];
-    return masters.filter((m) => m.isActive).map((m) => ({ label: m.categoryName, value: m.id }));
+    return masters
+      .filter((m) => m.isActive)
+      .map((m) => ({
+        label: m.subcategoryName ? `${m.categoryName} - ${m.subcategoryName}` : m.categoryName,
+        value: m.id,
+      }));
   }, [masters]);
 
   const selectedMaster = useMemo(() => masterOptions.find((m) => m.value === selectedMasterId), [masterOptions, selectedMasterId]);
@@ -66,8 +77,22 @@ export default function AddExpenseScreen() {
     onChange(v);
   };
 
+  const currentYear = new Date().getFullYear();
+
   const handleYearChange = (text: string, onChange: (v: string) => void) => {
-    onChange(text.replace(/\D/g, '').slice(0, 4));
+    const digits = text.replace(/\D/g, '').slice(0, 4);
+    if (digits.length === 4) {
+      const year = Number(digits);
+      if (year > currentYear) {
+        onChange(String(currentYear));
+        return;
+      }
+      if (year < 1900) {
+        onChange('1900');
+        return;
+      }
+    }
+    onChange(digits);
   };
 
   const onSubmit = async (data: FormData) => {

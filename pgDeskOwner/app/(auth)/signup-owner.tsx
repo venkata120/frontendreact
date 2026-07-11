@@ -27,7 +27,7 @@ const schema = z.object({
   password: z
     .string()
     .min(1, messages.required('Password'))
-    .min(6, messages.minLength('Password', 6)),
+    .regex(regex.strongPassword, messages.strongPassword()),
   confirmPassword: z
     .string()
     .min(1, messages.required('Confirm Password')),
@@ -35,9 +35,6 @@ const schema = z.object({
     .string()
     .min(1, messages.required('Aadhaar Number'))
     .regex(regex.aadhaar, messages.validAadhaar()),
-  location: z
-    .string()
-    .min(1, messages.required('Location')),
 }).refine((data) => data.password === data.confirmPassword, {
   message: messages.passwordMatch(),
   path: ['confirmPassword'],
@@ -60,6 +57,14 @@ export default function SignupOwnerScreen() {
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      fullName: '',
+      email: '',
+      mobile: '',
+      password: '',
+      confirmPassword: '',
+      aadhaar: '',
+    },
   });
 
   const onSubmit = async (data: FormData) => {
@@ -222,21 +227,6 @@ export default function SignupOwnerScreen() {
                     value={field.value}
                     onChangeText={field.onChange}
                     error={errors.aadhaar?.message}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="location"
-                render={({ field }) => (
-                  <Input
-                    label="Location *"
-                    placeholder="Enter location"
-                    maxLength={100}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.location?.message}
                   />
                 )}
               />

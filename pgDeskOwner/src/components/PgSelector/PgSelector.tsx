@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, TouchableOpacity, Modal, FlatList, TouchableWithoutFeedback } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography } from '../Typography/Typography';
 import { useTheme } from '../../hooks/useTheme';
@@ -25,10 +26,27 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
   const managerQuery = usePropertiesByManager(isManager ? userId : undefined);
 
   const properties = isManager ? managerQuery.data : ownerQuery.data;
-  const isLoading = isManager ? managerQuery.isLoading : ownerQuery.isLoading;
+  const isQueryLoading = isManager ? managerQuery.isLoading : ownerQuery.isLoading;
+  const isReady = !!userId;
+  const isLoading = !isReady || isQueryLoading;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isReady) return;
+      if (isManager) {
+        managerQuery.refetch();
+      } else {
+        ownerQuery.refetch();
+      }
+    }, [isReady, isManager, ownerQuery.refetch, managerQuery.refetch])
+  );
 
   useEffect(() => {
-    if (!properties || properties.length === 0) return;
+    if (!properties) return;
+    if (properties.length === 0) {
+      if (selectedPg) setSelectedPg(null);
+      return;
+    }
     const match = selectedPg?.id ? properties.find((p) => p.id === selectedPg.id) : undefined;
     if (match) {
       // Refresh stored data (e.g. name changed) while keeping selection
@@ -40,6 +58,10 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
       setSelectedPg(properties[0]);
     }
   }, [properties, selectedPg, setSelectedPg]);
+
+  const displayPg = selectedPg && properties?.some((p) => p.id === selectedPg.id)
+    ? selectedPg
+    : properties?.[0] ?? null;
 
   const handleSelect = (pg: Property) => {
     setSelectedPg(pg);
@@ -61,7 +83,7 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
         }}
       >
         <Typography variant="bodyMedium" style={{ fontWeight: '600' }}>
-          {isLoading ? 'Loading...' : selectedPg?.name || 'Select PG'}
+          {isLoading ? 'Loading...' : displayPg?.name || 'Select PG'}
         </Typography>
         <Ionicons name="chevron-down" size={16} color={theme.colors.text} style={{ marginLeft: 4 }} />
         {showCount && (
@@ -133,7 +155,7 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
                     }}
                   >
                     <Ionicons
-                      name={item.id === selectedPg?.id ? 'radio-button-on' : 'radio-button-off'}
+                      name={item.id === displayPg?.id ? 'radio-button-on' : 'radio-button-off'}
                       size={20}
                       color={theme.colors.primary}
                     />

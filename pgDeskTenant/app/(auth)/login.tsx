@@ -7,15 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Button, Input, Header } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
-
-const mobileRegex = /^[6-9]\d{9}$/;
+import { MOBILE_REGEX, sanitizeMobile } from '../../src/utils/validation';
 
 const schema = z.object({
   mobile: z
     .string()
     .min(10, 'Enter a valid 10-digit mobile number')
     .max(10, 'Enter a valid 10-digit mobile number')
-    .regex(mobileRegex, 'Mobile number must start with 6-9 and contain 10 digits'),
+    .regex(MOBILE_REGEX, 'Mobile number must start with 6-9 and contain 10 digits'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -65,7 +64,7 @@ export default function LoginScreen() {
               keyboardType="phone-pad"
               maxLength={10}
               value={value}
-              onChangeText={(text) => onChange(text.replace(/\D/g, '').slice(0, 10))}
+              onChangeText={(text) => onChange(sanitizeMobile(text))}
               onBlur={onBlur}
               error={errors.mobile?.message}
               leftIcon={
@@ -107,7 +106,7 @@ export default function LoginScreen() {
           }}
         >
           <Typography variant="body" color={theme.colors.textMuted}>
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
           </Typography>
           <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
             <Typography variant="body" color={theme.colors.primary} weight="600">

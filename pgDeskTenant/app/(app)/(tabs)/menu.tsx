@@ -72,7 +72,10 @@ export default function MenuScreen() {
         <Typography variant="headline2" color={theme.colors.white}>Food Menu</Typography>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: theme.spacing.md, paddingBottom: theme.spacing.xl }}
+      >
         <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={{ flex: 1, marginRight: theme.spacing.sm }}>
@@ -144,40 +147,49 @@ export default function MenuScreen() {
                       </View>
                     )}
                   </View>
-                  {items.map((item, idx) => (
-                    <Card
-                      key={idx}
-                      shadow="sm"
-                      padding={theme.spacing.md}
-                      style={{
-                        backgroundColor: meta.bg,
-                        borderWidth: 1,
-                        borderColor: meta.color,
-                        marginBottom: theme.spacing.sm,
-                      }}
-                    >
-                      {item.items.map((food, fIdx) => (
-                        <View key={fIdx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: fIdx < item.items.length - 1 ? theme.spacing.sm : 0 }}>
-                          <View
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: 4,
-                              backgroundColor:
-                                food.foodType === 'NON_VEG' ? '#EF4444' : food.foodType === 'EGG' ? '#F59E0B' : '#22C55E',
-                              marginRight: theme.spacing.sm,
-                            }}
-                          />
-                          <View style={{ flex: 1 }}>
-                            <Typography variant="bodyMedium" color={theme.colors.text}>{food.itemName}</Typography>
-                            {food.description && (
-                              <Typography variant="caption" color={theme.colors.textMuted} style={{ marginTop: 2 }}>{food.description}</Typography>
-                            )}
+                  {items.map((item, idx) => {
+                    const q = search.trim().toLowerCase();
+                    const visibleItems = item.items.filter((food) => {
+                      const matchesType = foodTypeFilter === 'ALL' || food.foodType === foodTypeFilter;
+                      const matchesSearch = !q || food.itemName.toLowerCase().includes(q);
+                      return matchesType && matchesSearch;
+                    });
+                    if (visibleItems.length === 0) return null;
+                    return (
+                      <Card
+                        key={idx}
+                        shadow="sm"
+                        padding={theme.spacing.md}
+                        style={{
+                          backgroundColor: meta.bg,
+                          borderWidth: 1,
+                          borderColor: meta.color,
+                          marginBottom: theme.spacing.sm,
+                        }}
+                      >
+                        {visibleItems.map((food, fIdx) => (
+                          <View key={fIdx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: fIdx < visibleItems.length - 1 ? theme.spacing.sm : 0 }}>
+                            <View
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: 4,
+                                backgroundColor:
+                                  food.foodType === 'NON_VEG' ? '#EF4444' : food.foodType === 'EGG' ? '#F59E0B' : '#22C55E',
+                                marginRight: theme.spacing.sm,
+                              }}
+                            />
+                            <View style={{ flex: 1 }}>
+                              <Typography variant="bodyMedium" color={theme.colors.text}>{food.itemName}</Typography>
+                              {food.description && (
+                                <Typography variant="caption" color={theme.colors.textMuted} style={{ marginTop: 2 }}>{food.description}</Typography>
+                              )}
+                            </View>
                           </View>
-                        </View>
-                      ))}
-                    </Card>
-                  ))}
+                        ))}
+                      </Card>
+                    );
+                  })}
                 </View>
               );
             })
@@ -187,7 +199,7 @@ export default function MenuScreen() {
 
       <Modal visible={filterOpen} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setFilterOpen(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }}>
-          <View style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: theme.radius.xl, borderTopRightRadius: theme.radius.xl, padding: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
+          <View style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: theme.radius.xl, borderTopRightRadius: theme.radius.xl, padding: theme.spacing.lg, paddingBottom: theme.spacing['4xl'] }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
               <Typography variant="title2" style={{ fontWeight: '600' }}>Filter Menu</Typography>
               <TouchableOpacity onPress={() => setFilterOpen(false)}>

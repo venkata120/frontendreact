@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
   View,
-  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   Alert,
   Image,
+  ActionSheetIOS,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,7 +34,7 @@ export default function EditProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { tenantId } = useTenant();
-  const { data: tenantDetails, isLoading } = useTenantDetails(tenantId ?? undefined);
+  const { data: tenantDetails, isLoading, refetch } = useTenantDetails(tenantId ?? undefined);
   const updateTenant = useUpdateTenant();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -65,45 +64,83 @@ export default function EditProfileScreen() {
     }
   }, [tenantDetails, reset]);
 
+  const uploadSelectedPhoto = async (asset: ImagePicker.ImagePickerAsset) => {
+    if (!tenantId) return;
+    setPhotoUri(asset.uri);
+    setUploadingPhoto(true);
+    try {
+      const uploadRes = await profileService.upload(
+        {
+          uri: asset.uri,
+          name: asset.fileName || 'profile.jpg',
+          type: asset.mimeType || 'image/jpeg',
+        },
+        'TENANT',
+        tenantId,
+        'profiles'
+      );
+      setPhotoUri(uploadRes.objectUrl);
+    } catch (err: any) {
+      Alert.alert('Upload failed', err?.message || 'Failed to upload profile photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const launchGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to photos to update your profile image.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      await uploadSelectedPhoto(result.assets[0]);
+    }
+  };
+
+  const launchCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow camera access to retake your profile photo.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      await uploadSelectedPhoto(result.assets[0]);
+    }
+  };
+
   const pickImage = async () => {
     if (!tenantId) {
       Alert.alert('Error', 'Tenant ID is missing');
       return;
     }
 
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please allow access to photos to update your profile image.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: false,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      setPhotoUri(asset.uri);
-      setUploadingPhoto(true);
-      try {
-        const uploadRes = await profileService.upload(
-          {
-            uri: asset.uri,
-            name: asset.fileName || 'profile.jpg',
-            type: asset.mimeType || 'image/jpeg',
-          },
-          'TENANT',
-          tenantId,
-          'profiles'
-        );
-        setPhotoUri(uploadRes.objectUrl);
-      } catch (err: any) {
-        Alert.alert('Upload failed', err?.message || 'Failed to upload profile photo');
-      } finally {
-        setUploadingPhoto(false);
-      }
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Take Photo', 'Choose from Library'],
+          cancelButtonIndex: 0,
+        },
+        async (buttonIndex) => {
+          if (buttonIndex === 1) await launchCamera();
+          else if (buttonIndex === 2) await launchGallery();
+        }
+      );
+    } else {
+      Alert.alert('Update Profile Photo', 'Choose an option', [
+        { text: 'Take Photo', onPress: launchCamera },
+        { text: 'Choose from Library', onPress: launchGallery },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
     }
   };
 
@@ -126,6 +163,7 @@ export default function EditProfileScreen() {
 
     try {
       await updateTenant.mutateAsync({ id: tenantId, payload });
+      await refetch();
       Alert.alert('Success', 'Profile updated successfully', [{ text: 'OK', onPress: () => router.back() }]);
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.message || err?.message || 'Failed to update profile');
@@ -133,7 +171,11 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper
+      scrollable
+      avoidKeyboard
+      scrollProps={{ contentContainerStyle: { flexGrow: 1, paddingBottom: theme.spacing.xl } }}
+    >
       <View
         style={{
           backgroundColor: theme.colors.primary,
@@ -162,84 +204,80 @@ export default function EditProfileScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
-          <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.base }}>
-            <Card shadow="lg" padding={theme.spacing.lg}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
-                <Ionicons name="person" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
-                <Typography variant="title1">Personal information</Typography>
-              </View>
+      <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.base, flex: 1 }}>
+        <Card shadow="lg" padding={theme.spacing.lg}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
+            <Ionicons name="person" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+            <Typography variant="title1">Personal information</Typography>
+          </View>
 
-              <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>Profile photo</Typography>
+          <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>Profile photo</Typography>
+          <View
+            style={{
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderRadius: theme.radius.lg,
+              padding: theme.spacing.lg,
+              alignItems: 'center',
+              marginBottom: theme.spacing.lg,
+            }}
+          >
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={{ width: 100, height: 100, borderRadius: 50 }} />
+            ) : (
               <View
                 style={{
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  borderRadius: theme.radius.lg,
-                  padding: theme.spacing.lg,
+                  width: 100,
+                  height: 100,
+                  borderRadius: 50,
+                  backgroundColor: theme.colors.primarySurface,
                   alignItems: 'center',
-                  marginBottom: theme.spacing.lg,
+                  justifyContent: 'center',
                 }}
               >
-                {photoUri ? (
-                  <Image source={{ uri: photoUri }} style={{ width: 100, height: 100, borderRadius: 50 }} />
-                ) : (
-                  <View
-                    style={{
-                      width: 100,
-                      height: 100,
-                      borderRadius: 50,
-                      backgroundColor: theme.colors.primarySurface,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Ionicons name="person" size={40} color={theme.colors.primary} />
-                  </View>
-                )}
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={pickImage}
-                  disabled={uploadingPhoto}
-                  style={{
-                    backgroundColor: theme.colors.primary,
-                    borderRadius: theme.radius.full,
-                    paddingVertical: 10,
-                    paddingHorizontal: theme.spacing.xl,
-                    marginTop: theme.spacing.md,
-                    opacity: uploadingPhoto ? 0.7 : 1,
-                  }}
-                >
-                  <Typography variant="bodyMedium" color={theme.colors.white} style={{ fontWeight: '600' }}>
-                    {uploadingPhoto ? 'Uploading...' : 'Retake Photo'}
-                  </Typography>
-                </TouchableOpacity>
+                <Ionicons name="person" size={40} color={theme.colors.primary} />
               </View>
-
-              {isLoading ? (
-                <Typography variant="body" color={theme.colors.textMuted}>Loading profile...</Typography>
-              ) : (
-                <>
-                  <Controller control={control} name="name" render={({ field }) => (
-                    <Input label="Full Name *" placeholder="Enter full name" maxLength={50} value={field.value} onChangeText={field.onChange} error={errors.name?.message} leftIcon="person-outline" />
-                  )} />
-                  <Controller control={control} name="phone" render={({ field }) => (
-                    <Input label="Mobile number *" placeholder="Enter mobile number" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))} error={errors.phone?.message} leftIcon="call-outline" />
-                  )} />
-                  <Controller control={control} name="parentName" render={({ field }) => (
-                    <Input label="Parent Name *" placeholder="Enter parent name" maxLength={50} value={field.value} onChangeText={field.onChange} error={errors.parentName?.message} leftIcon="people-outline" />
-                  )} />
-                  <Controller control={control} name="parentPhone" render={({ field }) => (
-                    <Input label="Parent Mobile Number *" placeholder="Enter parent mobile" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))} error={errors.parentPhone?.message} leftIcon="call-outline" />
-                  )} />
-                </>
-              )}
-            </Card>
+            )}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={pickImage}
+              disabled={uploadingPhoto}
+              style={{
+                backgroundColor: theme.colors.primary,
+                borderRadius: theme.radius.full,
+                paddingVertical: 10,
+                paddingHorizontal: theme.spacing.xl,
+                marginTop: theme.spacing.md,
+                opacity: uploadingPhoto ? 0.7 : 1,
+              }}
+            >
+              <Typography variant="bodyMedium" color={theme.colors.white} style={{ fontWeight: '600' }}>
+                {uploadingPhoto ? 'Uploading...' : 'Retake Photo'}
+              </Typography>
+            </TouchableOpacity>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
 
-      <View style={{ padding: theme.spacing.base, borderTopWidth: 1, borderTopColor: theme.colors.borderLight, backgroundColor: theme.colors.background }}>
+          {isLoading ? (
+            <Typography variant="body" color={theme.colors.textMuted}>Loading profile...</Typography>
+          ) : (
+            <>
+              <Controller control={control} name="name" render={({ field }) => (
+                <Input label="Full Name *" placeholder="Enter full name" maxLength={50} value={field.value} onChangeText={field.onChange} error={errors.name?.message} leftIcon="person-outline" />
+              )} />
+              <Controller control={control} name="phone" render={({ field }) => (
+                <Input label="Mobile number *" placeholder="Enter mobile number" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))} error={errors.phone?.message} leftIcon="call-outline" />
+              )} />
+              <Controller control={control} name="parentName" render={({ field }) => (
+                <Input label="Parent Name *" placeholder="Enter parent name" maxLength={50} value={field.value} onChangeText={field.onChange} error={errors.parentName?.message} leftIcon="people-outline" />
+              )} />
+              <Controller control={control} name="parentPhone" render={({ field }) => (
+                <Input label="Parent Mobile Number *" placeholder="Enter parent mobile" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))} error={errors.parentPhone?.message} leftIcon="call-outline" />
+              )} />
+            </>
+          )}
+        </Card>
+      </View>
+
+      <View style={{ padding: theme.spacing.base, borderTopWidth: 1, borderTopColor: theme.colors.borderLight, backgroundColor: theme.colors.background, marginTop: 'auto' }}>
         <Button
           title="Save Changes"
           loading={updateTenant.isPending}

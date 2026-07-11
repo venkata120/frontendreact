@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput, Modal } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -115,7 +115,9 @@ export default function AddRoomScreen() {
 
       setShowSuccess(true);
     } catch (err: any) {
-      setErrors({ submit: getApiErrorMessage(err, 'Failed to add room') });
+      const message = getApiErrorMessage(err, 'Failed to add room');
+      setErrors({ submit: message });
+      Alert.alert('Unable to add room', message);
     }
   };
 
@@ -125,6 +127,36 @@ export default function AddRoomScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={{ padding: theme.spacing.base, paddingTop: theme.spacing.lg }}>
+            {!selectedPgId && (
+              <Card shadow="lg" padding={theme.spacing.xl} style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    backgroundColor: theme.colors.primarySurface,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: theme.spacing.md,
+                  }}
+                >
+                  <Ionicons name="business-outline" size={40} color={theme.colors.primary} />
+                </View>
+                <Typography variant="title1" style={{ marginBottom: theme.spacing.sm }}>
+                  Please create a property first
+                </Typography>
+                <Typography variant="body" color={theme.colors.textMuted} align="center" style={{ marginBottom: theme.spacing.lg }}>
+                  You need a PG property before you can add rooms.
+                </Typography>
+                <Button
+                  title="Create Property"
+                  onPress={() => router.push('/screens/add-property' as any)}
+                  leftIcon={<Ionicons name="add-circle" size={20} color={theme.colors.white} />}
+                />
+              </Card>
+            )}
+
+            {selectedPgId && (
             <Card shadow="lg" padding={theme.spacing.lg}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
                 <Ionicons name="bed" size={20} color={theme.colors.text} style={{ marginRight: 8 }} />
@@ -267,18 +299,21 @@ export default function AddRoomScreen() {
                 </Typography>
               )}
             </Card>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={{ padding: theme.spacing.base }}>
-        <Button
-          title="Add Room"
-          loading={createRoom.isPending || createBed.isPending}
-          leftIcon={<Ionicons name="add-circle" size={20} color={theme.colors.white} />}
-          onPress={onSubmit}
-        />
-      </View>
+      {selectedPgId && (
+        <View style={{ padding: theme.spacing.base }}>
+          <Button
+            title="Add Room"
+            loading={createRoom.isPending || createBed.isPending}
+            leftIcon={<Ionicons name="add-circle" size={20} color={theme.colors.white} />}
+            onPress={onSubmit}
+          />
+        </View>
+      )}
 
       {/* Success modal */}
       <Modal visible={showSuccess} transparent animationType="fade">

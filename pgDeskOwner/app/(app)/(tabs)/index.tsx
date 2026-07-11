@@ -102,6 +102,14 @@ export default function HomeScreen() {
       bg: theme.colors.warningSurface,
       route: '/screens/pending-dues',
     },
+    {
+      label: 'Income',
+      value: `₹${Math.round(pgSummary?.monthlyRevenue ?? overview?.totalMonthlyRevenue ?? 0).toLocaleString()}`,
+      icon: 'cash',
+      color: '#00A63E',
+      bg: '#DCFCE7',
+      route: '/screens/income',
+    },
   ];
 
   const [activeTab, setActiveTab] = useState<'notices' | 'food'>('food');
@@ -157,7 +165,7 @@ export default function HomeScreen() {
                 <Card
                   shadow="sm"
                   padding={theme.spacing.md}
-                  minHeight={100}
+                  minHeight={108}
                   style={{ justifyContent: 'center' }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -173,7 +181,7 @@ export default function HomeScreen() {
                     >
                       <Ionicons name={item.icon as any} size={24} color={item.color} />
                     </View>
-                    <View style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
+                    <View style={{ marginLeft: theme.spacing.sm, flex: 1, flexShrink: 1 }}>
                       <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1} ellipsizeMode="tail">
                         {item.label}
                       </Typography>

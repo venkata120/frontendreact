@@ -231,7 +231,7 @@ export default function AddTenantScreen() {
       />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.xl }} keyboardShouldPersistTaps="handled">
           <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.xl }}>
             <Card shadow="lg" padding={theme.spacing.lg}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>

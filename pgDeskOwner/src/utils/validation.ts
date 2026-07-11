@@ -1,10 +1,11 @@
 export const regex = {
-  alphabetsOnly: /^[A-Za-z\s]+$/,
+  alphabetsOnly: /^(?=.*[A-Za-z])[A-Za-z\s]+$/,
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   mobile: /^\d{10}$/,
   aadhaar: /^\d{12}$/,
   digitsOnly: /^\d+$/,
   positiveInteger: /^[1-9]\d*$/,
+  strongPassword: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/,
 };
 
 export const messages = {
@@ -17,6 +18,8 @@ export const messages = {
   validAadhaar: () => 'Aadhaar Number must be exactly 12 digits',
   validNumber: (field: string) => `${field} must be a valid number`,
   passwordMatch: () => 'Passwords do not match',
+  strongPassword: () =>
+    'Password must be at least 8 characters and include uppercase, lowercase, number, and special character',
 };
 
 export const normalizeMobile = (mobile: string): string => {

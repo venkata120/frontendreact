@@ -554,7 +554,7 @@ export default function FoodMenuScreen() {
         visible={menuModalVisible}
         onRequestClose={closeMenuModal}
       >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.96)' }}>
           <View
             style={{
               backgroundColor: theme.colors.background,

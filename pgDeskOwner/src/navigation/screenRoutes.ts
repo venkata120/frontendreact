@@ -29,6 +29,7 @@ export const SCREEN_ROUTES = {
   ExpensesList: '/screens/expenses-list',
   FoodMessCharges: '/screens/food-mess-charges',
   UtilityCharges: '/screens/utility-charges',
+  Income: '/screens/income',
   OtpVerification: '/screens/otp-verification',
   AddProperty: '/screens/add-property',
   LeftTenantsProfile: '/screens/left-tenants-profile',

@@ -1,38 +1,90 @@
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, ProfileImagePicker } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useAuth } from '../../src/hooks/useAuth';
 
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
-import { useManagerAssignmentsByPg, useRemoveManager } from '../../src/hooks/queries';
+import { useManagerAssignmentsByPg, useRemoveManager, useManagers } from '../../src/hooks/queries';
+import type { ManagerPgAssignment } from '../../src/types';
+
+interface DisplayInfo {
+  id: string;
+  name?: string;
+  email?: string;
+  mobile?: string;
+}
 
 export default function ManagerProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { user } = useAuth();
   const { selectedPg } = useSelectedPg();
   const qc = useQueryClient();
-  const { data: assignments, isLoading, refetch } = useManagerAssignmentsByPg(selectedPg?.id);
+  const { managerId } = useLocalSearchParams<{ managerId?: string }>();
+
+  const { data: assignments, isLoading: assignmentsLoading, refetch: refetchAssignments } = useManagerAssignmentsByPg(selectedPg?.id);
+  const { data: managers, isLoading: managersLoading } = useManagers(user?.id);
   const removeManager = useRemoveManager();
 
-  const assignment = assignments?.[0];
+  const selectedManager = managerId ? managers?.find((m) => m.id === managerId) : undefined;
+  const assignmentForSelected = managerId
+    ? assignments?.find((a) => a.managerId === managerId)
+    : undefined;
+
+  const assignment: ManagerPgAssignment | undefined = selectedManager
+    ? assignmentForSelected
+    : assignments?.[0];
+
+  const displayInfo: DisplayInfo | undefined = (() => {
+    if (selectedManager) {
+      return {
+        id: selectedManager.id,
+        name: selectedManager.name,
+        email: selectedManager.email,
+        mobile: selectedManager.mobile,
+      };
+    }
+    if (assignment) {
+      return {
+        id: assignment.managerId,
+        name: assignment.managerName,
+        email: assignment.managerEmail,
+      };
+    }
+    return undefined;
+  })();
+
+  const isLoading = managersLoading || assignmentsLoading;
 
   const handleRemove = async () => {
     if (!assignment) return;
     Alert.alert(
       'Remove Manager',
-      `Are you sure you want to remove ${assignment.managerName || 'this manager'}?`,
+      `Are you sure you want to remove ${displayInfo?.name || 'this manager'}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            await removeManager.mutateAsync({ managerId: assignment.managerId, pgId: assignment.pgId });
-            await qc.invalidateQueries({ queryKey: ['managers'] });
-            await refetch();
-            Alert.alert('Removed', 'Manager has been removed successfully');
+            try {
+              await removeManager.mutateAsync({ managerId: assignment.managerId, pgId: assignment.pgId });
+              await qc.invalidateQueries({ queryKey: ['managers'] });
+              await qc.invalidateQueries({ queryKey: ['manager-assignments'] });
+              await refetchAssignments();
+              if (user?.id) {
+                await qc.refetchQueries({ queryKey: ['managers', user.id] });
+              }
+              Alert.alert('Removed', 'Manager has been removed successfully');
+              if (managerId) {
+                router.replace('/screens/manager-profile');
+              }
+            } catch {
+              Alert.alert('Error', 'Failed to remove manager. Please try again.');
+            }
           },
         },
       ]
@@ -40,12 +92,19 @@ export default function ManagerProfileScreen() {
   };
 
   const showManagerInfo = () => {
-    if (!assignment) return;
+    if (!displayInfo) return;
     Alert.alert(
       'Manager Information',
-      `Name: ${assignment.managerName || 'N/A'}\nEmail: ${assignment.managerEmail || 'N/A'}`
+      `Name: ${displayInfo.name || 'N/A'}\nEmail: ${displayInfo.email || 'N/A'}\nPhone: ${displayInfo.mobile || 'N/A'}`
     );
   };
+
+  const statCards = [
+    { label: 'Last Login', value: '—', icon: 'phone-portrait', color: '#A855F7' },
+    { label: 'Tenants Added', value: '—', icon: 'people', color: '#22C55E', route: '/(app)/(tabs)/tenants' },
+    { label: 'Collected Payments', value: '—', icon: 'cash', color: '#22C55E', route: '/screens/collected-amount' },
+    { label: 'Vacates', value: '—', icon: 'exit', color: '#F97316', route: '/screens/left-tenants-profile' },
+  ];
 
   return (
     <ScreenWrapper>
@@ -82,24 +141,27 @@ export default function ManagerProfileScreen() {
           <Card shadow="lg" padding={theme.spacing.lg} style={{ alignItems: 'center' }}>
             <ProfileImagePicker
               size={100}
-              name={assignment?.managerName || 'Manager'}
+              name={displayInfo?.name || 'Manager'}
               profileType="MANAGER"
-              entityId={assignment?.managerId}
+              entityId={displayInfo?.id}
               onUploaded={(result) => {
                 console.log('[ManagerProfile] uploaded', result.objectUrl);
               }}
             />
-            <Typography variant="headline2" style={{ marginTop: theme.spacing.md }}>{assignment?.managerName || assignment?.managerEmail || 'No Manager Assigned'}</Typography>
-            <Typography variant="body" color={theme.colors.textMuted}>{assignment?.managerEmail || selectedPg?.name || 'Assign a manager to manage this property'}</Typography>
+            <Typography variant="headline2" style={{ marginTop: theme.spacing.md }}>{displayInfo?.name || displayInfo?.email || 'No Manager Assigned'}</Typography>
+            <Typography variant="body" color={theme.colors.textMuted}>{displayInfo?.email || selectedPg?.name || 'Assign a manager to manage this property'}</Typography>
 
-            {assignment && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%', marginTop: theme.spacing.lg }}>
-                {[
-                  { label: 'Last Login', value: '—', icon: 'phone-portrait', color: '#A855F7' },
-                  { label: 'Tenants Added', value: '—', icon: 'people', color: '#22C55E', route: '/(app)/(tabs)/tenants' },
-                  { label: 'Collected Payments', value: '—', icon: 'cash', color: '#22C55E', route: '/screens/collected-amount' },
-                  { label: 'Vacates', value: '—', icon: 'exit', color: '#F97316', route: '/screens/left-tenants-profile' },
-                ].map((stat) => (
+            {displayInfo && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  width: '100%',
+                  marginTop: theme.spacing.lg,
+                  gap: theme.spacing.md,
+                }}
+              >
+                {statCards.map((stat) => (
                   <TouchableOpacity
                     key={stat.label}
                     activeOpacity={0.8}
@@ -110,7 +172,7 @@ export default function ManagerProfileScreen() {
                         Alert.alert(stat.label, 'Manager statistics will be available in a future update.');
                       }
                     }}
-                    style={{ width: '48%', marginBottom: theme.spacing.md }}
+                    style={{ flex: 1, minWidth: '45%' }}
                   >
                     <Card shadow="sm" padding={theme.spacing.sm} minHeight={72} style={{ justifyContent: 'center' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -130,7 +192,7 @@ export default function ManagerProfileScreen() {
           {assignment ? (
             <>
               {[
-                { label: 'Manager information', icon: 'person', color: '#0065F4', route: '', onPress: showManagerInfo },
+                { label: 'Manager information', icon: 'person', color: '#0065F4', onPress: showManagerInfo },
                 { label: 'Manager Permissions', icon: 'remove-circle', color: '#0065F4', route: '/screens/manage-all-permissions' },
                 { label: 'Access Requests', icon: 'key', color: '#0065F4', route: '/screens/access-requests' },
               ].map((item) => (

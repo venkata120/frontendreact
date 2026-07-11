@@ -24,6 +24,7 @@ import type {
   NoticeType,
   AudienceType,
   NoticePriority,
+  NoticeStatus,
 } from '../../src/types';
 
 const NOTICE_TYPE_OPTIONS: { label: string; value: NoticeType }[] = [
@@ -76,6 +77,10 @@ export default function NoticeBoardScreen() {
   const insets = useSafeAreaInsets();
 
   const [search, setSearch] = useState('');
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<NoticeType | 'ALL'>('ALL');
+  const [priorityFilter, setPriorityFilter] = useState<NoticePriority | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<NoticeStatus | 'ALL'>('ALL');
   const [modalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -92,12 +97,16 @@ export default function NoticeBoardScreen() {
       selectedPg?.id
         ? {
             propertyId: selectedPg.id,
+            title: search.trim() || undefined,
+            noticeType: typeFilter !== 'ALL' ? typeFilter : undefined,
+            priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
+            status: statusFilter !== 'ALL' ? statusFilter : undefined,
             sortBy: 'createdDate',
             sortDirection: 'DESC' as const,
             size: 50,
           }
         : undefined,
-    [selectedPg?.id]
+    [selectedPg?.id, search, typeFilter, priorityFilter, statusFilter]
   );
 
   const { data, isLoading } = useNotices(searchPayload);
@@ -106,23 +115,12 @@ export default function NoticeBoardScreen() {
 
   const notices = useMemo(() => data?.notices || [], [data]);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return notices;
-    const q = search.toLowerCase();
-    return notices.filter(
-      (n) =>
-        n.title.toLowerCase().includes(q) ||
-        n.description.toLowerCase().includes(q) ||
-        n.noticeType.toLowerCase().includes(q)
-    );
-  }, [notices, search]);
-
   const stats = useMemo(() => {
-    const total = filtered.length;
-    const published = filtered.filter((n) => n.status === 'ACTIVE').length;
-    const tenantPosts = filtered.filter((n) => n.senderType === 'TENANT').length;
-    const drafts = filtered.filter((n) => n.status === 'CLOSED').length;
-    const scheduled = filtered.filter(
+    const total = notices.length;
+    const published = notices.filter((n) => n.status === 'ACTIVE').length;
+    const tenantPosts = notices.filter((n) => n.senderType === 'TENANT').length;
+    const drafts = notices.filter((n) => n.status === 'CLOSED').length;
+    const scheduled = notices.filter(
       (n) => n.publishFrom && dayjs(n.publishFrom).isAfter(dayjs())
     ).length;
     const pinned = 0;
@@ -134,7 +132,15 @@ export default function NoticeBoardScreen() {
       { label: 'Schedule', value: scheduled, icon: 'time', color: '#F59E0B' },
       { label: 'Pinned', value: pinned, icon: 'star', color: '#EF4444' },
     ];
-  }, [filtered]);
+  }, [notices]);
+
+  const activeFilterCount = [typeFilter, priorityFilter, statusFilter].filter((f) => f !== 'ALL').length;
+
+  const resetFilters = () => {
+    setTypeFilter('ALL');
+    setPriorityFilter('ALL');
+    setStatusFilter('ALL');
+  };
 
   const resetForm = () => {
     setTitle('');
@@ -313,18 +319,19 @@ export default function NoticeBoardScreen() {
             </View>
             <TouchableOpacity
               activeOpacity={0.8}
+              onPress={() => setFilterVisible(true)}
               style={{
                 width: 48,
                 height: 48,
                 borderRadius: theme.radius.md,
-                backgroundColor: theme.colors.backgroundSecondary,
+                backgroundColor: activeFilterCount > 0 ? theme.colors.primarySurface : theme.colors.backgroundSecondary,
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderWidth: 1,
-                borderColor: theme.colors.border,
+                borderColor: activeFilterCount > 0 ? theme.colors.primary : theme.colors.border,
               }}
             >
-              <Ionicons name="options-outline" size={22} color={theme.colors.primary} />
+              <Ionicons name="options-outline" size={22} color={activeFilterCount > 0 ? theme.colors.primary : theme.colors.text} />
             </TouchableOpacity>
           </View>
 
@@ -348,8 +355,8 @@ export default function NoticeBoardScreen() {
 
           {isLoading && <Typography variant="body" color={theme.colors.textMuted}>Loading notices...</Typography>}
 
-          {!isLoading && filtered.length > 0 ? (
-            filtered.map((notice) => {
+          {!isLoading && notices.length > 0 ? (
+            notices.map((notice) => {
               const senderLabel = SENDER_LABELS[notice.senderType] || 'Post';
               const audienceLabel = AUDIENCE_LABELS[notice.audienceType] || 'All';
               const priorityMeta = PRIORITY_OPTIONS.find((p) => p.value === notice.priority);
@@ -479,7 +486,7 @@ export default function NoticeBoardScreen() {
             <View style={{ alignItems: 'center', paddingVertical: theme.spacing['3xl'] }}>
               <Ionicons name="newspaper-outline" size={48} color={theme.colors.border} />
               <Typography variant="body" color={theme.colors.textMuted}>
-                No notices yet
+                {search.trim() || activeFilterCount > 0 ? 'No notices match your search.' : 'No notices yet'}
               </Typography>
             </View>
           ) : null}
@@ -617,6 +624,77 @@ export default function NoticeBoardScreen() {
         onClose={() => setDateField(null)}
         title="Publish Till"
       />
+
+      <Modal
+        animationType="slide"
+        transparent
+        statusBarTranslucent
+        visible={filterVisible}
+        onRequestClose={() => setFilterVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <View
+            style={{
+              backgroundColor: theme.colors.background,
+              borderTopLeftRadius: theme.radius['2xl'],
+              borderTopRightRadius: theme.radius['2xl'],
+              padding: theme.spacing.base,
+              paddingBottom: theme.spacing['2xl'],
+              maxHeight: '85%',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+              <Typography variant="headline2">Filter Notices</Typography>
+              <TouchableOpacity onPress={() => setFilterVisible(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Typography variant="bodyMedium" style={{ fontWeight: '600', marginBottom: theme.spacing.sm }}>
+                Notice Type
+              </Typography>
+              {renderOptionButton(
+                [{ label: 'All Types', value: 'ALL' }, ...NOTICE_TYPE_OPTIONS],
+                typeFilter,
+                (value) => setTypeFilter(value as NoticeType | 'ALL')
+              )}
+
+              <Typography variant="bodyMedium" style={{ fontWeight: '600', marginTop: theme.spacing.lg, marginBottom: theme.spacing.sm }}>
+                Priority
+              </Typography>
+              {renderOptionButton(
+                [{ label: 'All Priorities', value: 'ALL' }, ...PRIORITY_OPTIONS],
+                priorityFilter,
+                (value) => setPriorityFilter(value as NoticePriority | 'ALL')
+              )}
+
+              <Typography variant="bodyMedium" style={{ fontWeight: '600', marginTop: theme.spacing.lg, marginBottom: theme.spacing.sm }}>
+                Status
+              </Typography>
+              {renderOptionButton(
+                [
+                  { label: 'All Statuses', value: 'ALL' },
+                  { label: 'Active', value: 'ACTIVE' },
+                  { label: 'Closed', value: 'CLOSED' },
+                  { label: 'Archived', value: 'ARCHIVED' },
+                ],
+                statusFilter,
+                (value) => setStatusFilter(value as NoticeStatus | 'ALL')
+              )}
+
+              <View style={{ flexDirection: 'row', marginTop: theme.spacing.lg }}>
+                <View style={{ flex: 1, marginRight: theme.spacing.sm }}>
+                  <Button title="Clear" variant="outline" onPress={resetFilters} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button title="Apply" onPress={() => setFilterVisible(false)} />
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScreenWrapper>
   );
 }

@@ -103,10 +103,11 @@ export default function ManageAllPermissionsScreen() {
               alignItems: 'center',
               justifyContent: 'center',
               backgroundColor: theme.colors.danger,
-              paddingHorizontal: theme.spacing.sm,
-              paddingVertical: 6,
+              paddingHorizontal: theme.spacing.md,
+              paddingVertical: 8,
               borderRadius: theme.radius.md,
-              minWidth: 64,
+              minWidth: 72,
+              flexShrink: 0,
             }}
           >
             <Ionicons name="refresh" size={14} color={theme.colors.white} />
