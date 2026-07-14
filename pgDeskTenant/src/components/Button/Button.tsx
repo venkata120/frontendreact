@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   TouchableOpacity,
   TouchableOpacityProps,
@@ -21,6 +21,7 @@ interface Props extends TouchableOpacityProps {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
+  disableDebounce?: boolean;
 }
 
 export const Button: React.FC<Props> = ({
@@ -32,10 +33,25 @@ export const Button: React.FC<Props> = ({
   leftIcon,
   rightIcon,
   fullWidth = true,
+  disableDebounce = false,
   style,
+  onPress,
   ...rest
 }) => {
   const theme = useTheme();
+  const lastPressRef = useRef<number>(0);
+
+  const handlePress = (e: any) => {
+    if (!onPress) return;
+    if (disableDebounce) {
+      onPress(e);
+      return;
+    }
+    const now = Date.now();
+    if (now - lastPressRef.current < 500) return;
+    lastPressRef.current = now;
+    onPress(e);
+  };
 
   const sizeStyles: Record<ButtonSize, { height: number; padding: number; fontSize: number }> = {
     sm: { height: 32, padding: theme.spacing.sm, fontSize: theme.fontSizes.sm },
@@ -90,6 +106,7 @@ export const Button: React.FC<Props> = ({
       activeOpacity={0.8}
       disabled={disabled || loading}
       style={[baseContainer, vs.container, style]}
+      onPress={handlePress}
       {...rest}
     >
       {loading ? (

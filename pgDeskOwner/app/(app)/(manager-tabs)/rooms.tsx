@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, HeroHeader } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
@@ -11,6 +11,7 @@ import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
 import { useSelectedPg } from '../../../src/context/SelectedPgContext';
 import { useRoomsWithBeds, useFloorsByPg, useDeleteRoom } from '../../../src/hooks/queries';
+import { confirmAction } from '../../../src/utils/uiHelpers';
 import type { Room, Bed } from '../../../src/types';
 
 type StatKey = 'available' | 'occupied' | 'notice' | 'prebooking';
@@ -262,16 +263,14 @@ export default function ManagerRoomsScreen() {
                             </TouchableOpacity>
                             <TouchableOpacity
                               activeOpacity={0.8}
-                              onPress={() => {
-                                Alert.alert(
+                              onPress={() =>
+                                confirmAction(
                                   'Delete Room',
                                   'Are you sure you want to delete this room?',
-                                  [
-                                    { text: 'Cancel', style: 'cancel' },
-                                    { text: 'Delete', style: 'destructive', onPress: () => deleteRoom.mutate(room.id) },
-                                  ]
-                                );
-                              }}
+                                  () => deleteRoom.mutate(room.id),
+                                  'Delete'
+                                )
+                              }
                               style={{
                                 width: 32,
                                 height: 32,

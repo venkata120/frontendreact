@@ -125,6 +125,7 @@ export default function SignupScreen() {
       scrollProps={{
         showsVerticalScrollIndicator: false,
         contentContainerStyle: {
+          flexGrow: 1,
           paddingHorizontal: theme.spacing.base,
           paddingBottom: theme.spacing.xl,
         },

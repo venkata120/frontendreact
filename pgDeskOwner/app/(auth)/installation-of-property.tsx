@@ -11,11 +11,11 @@ import { useSelectedPg } from '../../src/context/SelectedPgContext';
 import { useCreateProperty } from '../../src/hooks/queries';
 
 const schema = z.object({
-  hostelName: z.string().min(2, 'Hostel name is required'),
+  hostelName: z.string().min(2, 'Hostel name is required').max(100, 'Hostel name is too long'),
   type: z.string().min(1, 'Type of hostel is required'),
-  floors: z.string().min(1, 'Floors is required'),
-  city: z.string().min(2, 'City is required'),
-  address: z.string().min(5, 'Address is required'),
+  floors: z.string().min(1, 'Floors is required').max(2, 'Floors must be 1-2 digits'),
+  city: z.string().min(2, 'City is required').max(50, 'City name is too long'),
+  address: z.string().min(5, 'Hostel address is required').max(200, 'Address is too long'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -56,8 +56,8 @@ export default function InstallationOfPropertyScreen() {
       });
       setSelectedPg(property);
       router.replace({
-        pathname: '/screens/add-property',
-        params: { propertyId: property.id },
+        pathname: '/screens/property-details',
+        params: { id: property.id },
       });
     } catch {
       // error shown by mutation
@@ -104,8 +104,9 @@ export default function InstallationOfPropertyScreen() {
                   name="hostelName"
                   render={({ field }) => (
                     <Input
-                      label="Hostel Name"
+                      label="Hostel Name *"
                       placeholder="Enter hostel name"
+                      maxLength={100}
                       value={field.value}
                       onChangeText={field.onChange}
                       error={errors.hostelName?.message}
@@ -149,9 +150,10 @@ export default function InstallationOfPropertyScreen() {
                   name="floors"
                   render={({ field }) => (
                     <Input
-                      label="Floors"
+                      label="Floors *"
                       placeholder="Enter number of floors"
                       keyboardType="numeric"
+                      maxLength={2}
                       value={field.value}
                       onChangeText={field.onChange}
                       error={errors.floors?.message}
@@ -165,8 +167,9 @@ export default function InstallationOfPropertyScreen() {
                   name="city"
                   render={({ field }) => (
                     <Input
-                      label="City"
+                      label="City *"
                       placeholder="Enter city"
+                      maxLength={50}
                       value={field.value}
                       onChangeText={field.onChange}
                       error={errors.city?.message}
@@ -180,10 +183,11 @@ export default function InstallationOfPropertyScreen() {
                   name="address"
                   render={({ field }) => (
                     <Input
-                      label="Hostel Address"
+                      label="Hostel Address *"
                       placeholder="Enter hostel address"
                       multiline
                       numberOfLines={3}
+                      maxLength={200}
                       value={field.value}
                       onChangeText={field.onChange}
                       error={errors.address?.message}

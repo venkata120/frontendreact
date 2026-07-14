@@ -6,6 +6,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useSelectedPg } from '../../src/context/SelectedPgContext';
 import { useProperties, useDashboardOverview } from '../../src/hooks/queries';
+import { confirmAction } from '../../src/utils/uiHelpers';
 import { useMemo } from 'react';
 
 export default function ProfileScreen() {
@@ -153,7 +154,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={signOut}
+            onPress={() => confirmAction('Logout', 'Are you sure you want to logout?', signOut)}
             style={{
               backgroundColor: theme.colors.danger,
               borderRadius: theme.radius.full,

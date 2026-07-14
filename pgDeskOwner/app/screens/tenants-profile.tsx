@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ScreenWrapper,
@@ -15,6 +15,7 @@ import {
 import { useTheme } from '../../src/hooks/useTheme';
 import { useTenant, useDeleteTenant, useUpdateBedStatus } from '../../src/hooks/queries';
 import { getApiErrorMessage } from '../../src/utils/validation';
+import { callPhone } from '../../src/utils/uiHelpers';
 import { useState, useMemo } from 'react';
 
 export default function TenantsProfileScreen() {
@@ -32,11 +33,8 @@ export default function TenantsProfileScreen() {
     [tenant?.rentLedgers]
   );
 
-  const handleCall = async (phone?: string) => {
-    if (!phone) return;
-    const url = `tel:${phone}`;
-    const supported = await Linking.canOpenURL(url);
-    if (supported) await Linking.openURL(url);
+  const handleCall = (phone?: string) => {
+    callPhone(phone);
   };
 
   const handleDelete = async () => {

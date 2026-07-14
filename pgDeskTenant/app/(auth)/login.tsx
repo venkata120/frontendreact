@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Button, Input, Header } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
+import { useEffect } from 'react';
 import { MOBILE_REGEX, sanitizeMobile } from '../../src/utils/validation';
 
 const schema = z.object({
@@ -22,7 +23,11 @@ type FormData = z.infer<typeof schema>;
 export default function LoginScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { sendOtp, otpLoading, error, resetError } = useAuth();
+  const { sendOtp, otpLoading, error, resetError, resetLoading } = useAuth();
+
+  useEffect(() => {
+    resetLoading();
+  }, [resetLoading]);
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),

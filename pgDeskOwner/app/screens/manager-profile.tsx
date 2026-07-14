@@ -158,7 +158,7 @@ export default function ManagerProfileScreen() {
                   flexWrap: 'wrap',
                   width: '100%',
                   marginTop: theme.spacing.lg,
-                  gap: theme.spacing.md,
+                  justifyContent: 'space-between',
                 }}
               >
                 {statCards.map((stat) => (
@@ -172,7 +172,7 @@ export default function ManagerProfileScreen() {
                         Alert.alert(stat.label, 'Manager statistics will be available in a future update.');
                       }
                     }}
-                    style={{ flex: 1, minWidth: '45%' }}
+                    style={{ width: '48%', marginBottom: theme.spacing.md }}
                   >
                     <Card shadow="sm" padding={theme.spacing.sm} minHeight={72} style={{ justifyContent: 'center' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>

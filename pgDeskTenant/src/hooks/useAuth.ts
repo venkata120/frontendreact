@@ -8,6 +8,7 @@ import {
   sendOtp,
   verifyOtp,
   resendOtp,
+  resetLoadingFlags,
 } from '../redux/slices/authSlice';
 import type { RootState, AppDispatch } from '../redux/store';
 import type { UserRole } from '../types';
@@ -38,6 +39,10 @@ export const useAuth = () => {
     dispatch(clearError());
   }, [dispatch]);
 
+  const resetLoading = useCallback(() => {
+    dispatch(resetLoadingFlags());
+  }, [dispatch]);
+
   const sendOtpRequest = useCallback(
     (mobile: string) => {
       return dispatch(sendOtp(mobile)).unwrap();
@@ -65,6 +70,7 @@ export const useAuth = () => {
     signOut,
     selectRole,
     resetError,
+    resetLoading,
     sendOtp: sendOtpRequest,
     verifyOtp: verifyOtpRequest,
     resendOtp: resendOtpRequest,

@@ -76,7 +76,7 @@ export default function ManageAllPermissionsScreen() {
           paddingHorizontal: theme.spacing.base,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: theme.spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: theme.spacing.md }}>
             <TouchableOpacity
               activeOpacity={0.8}
@@ -93,7 +93,7 @@ export default function ManageAllPermissionsScreen() {
             >
               <Ionicons name="arrow-back" size={20} color="#0A2A5E" />
             </TouchableOpacity>
-            <Typography variant="headline2" color={theme.colors.white} numberOfLines={1} style={{ flexShrink: 1 }}>Manage Permissions</Typography>
+            <Typography variant="headline2" color={theme.colors.white} numberOfLines={1} style={{ flexShrink: 1, flex: 1 }}>Manage Permissions</Typography>
           </View>
           <TouchableOpacity
             activeOpacity={0.8}

@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { REHYDRATE } from 'redux-persist';
 import { AuthService, mapBackendRole } from '../../services/auth';
 import { usersService } from '../../api/services';
 import type { Session, User, UserRole } from '../../types';
@@ -153,6 +154,10 @@ const authSlice = createSlice({
     setOtpMobile: (state, action: PayloadAction<string | null>) => {
       state.otpMobile = action.payload;
     },
+    resetLoadingFlags: (state) => {
+      state.loading = false;
+      state.otpLoading = false;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -228,9 +233,15 @@ const authSlice = createSlice({
       .addCase(resendOtp.rejected, (state, action) => {
         state.otpLoading = false;
         state.error = (action.payload as string) || 'Failed to resend OTP';
+      })
+      .addCase(REHYDRATE, (state) => {
+        // Reset transient loading flags so a persisted-in-progress state
+        // does not leave buttons stuck showing a spinner after app restart.
+        state.loading = false;
+        state.otpLoading = false;
       });
   },
 });
 
-export const { clearError, setRole, setOtpMobile } = authSlice.actions;
+export const { clearError, setRole, setOtpMobile, resetLoadingFlags } = authSlice.actions;
 export default authSlice.reducer;

@@ -3,13 +3,14 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, SearchBar, HeroHeader, Avatar } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
 import { useManagers, useDeleteManager } from '../../../src/hooks/queries';
+import { callPhone } from '../../../src/utils/uiHelpers';
 
 const DEPARTMENTS = ['All workers', 'Management', 'Kitchen'];
 const DEPT_ICONS: Record<string, any> = {
@@ -47,17 +48,12 @@ export default function StaffScreen() {
     return matchesSearch && matchesDept;
   });
 
-  const handleCall = async (phone?: string) => {
+  const handleCall = (phone?: string) => {
     if (!phone) {
       Alert.alert('No phone number', 'This staff member does not have a phone number.');
       return;
     }
-    const url = `tel:${phone}`;
-    try {
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert('Error', 'Could not open phone dialer');
-    }
+    callPhone(phone);
   };
 
   return (

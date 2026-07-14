@@ -160,13 +160,13 @@ export default function HomeScreen() {
                   key={item.label}
                   activeOpacity={0.8}
                   onPress={() => item.route && router.push(item.route as any)}
-                  style={{ width: '48%', marginBottom: theme.spacing.md }}
+                  style={{ width: '48%', marginBottom: theme.spacing.md, alignSelf: 'stretch' }}
                 >
                 <Card
                   shadow="sm"
                   padding={theme.spacing.md}
                   minHeight={108}
-                  style={{ justifyContent: 'center' }}
+                  style={{ flex: 1, justifyContent: 'center' }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <View

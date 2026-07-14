@@ -14,6 +14,7 @@ export default function AppLayout() {
       <Stack.Screen name="all-screens" />
       <Stack.Screen name="screens/tenant-login-1" />
       <Stack.Screen name="screens/support" />
+      <Stack.Screen name="screens/notifications" />
       <Stack.Screen name="screens/tenant-login-4" />
       <Stack.Screen name="screens/otp-signup" />
       <Stack.Screen name="screens/terms-and-conditions" />

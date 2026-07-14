@@ -21,7 +21,11 @@ type FormData = z.infer<typeof schema>;
 export default function LoginScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { sendOtp, otpLoading, error, resetError, isAuthenticated, userRole } = useAuth();
+  const { sendOtp, otpLoading, error, resetError, isAuthenticated, userRole, resetLoading } = useAuth();
+
+  useEffect(() => {
+    resetLoading();
+  }, [resetLoading]);
 
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
