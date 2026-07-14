@@ -19,7 +19,7 @@ const ROLES = [
     key: 'manager' as UserRole,
     label: 'Manager',
     description: 'Oversee daily operations & teams',
-    image: require('../../assets/images/Owner.png'),
+    image: require('../../assets/images/Manager.png'),
     bgColor: '#E8F5E9',
     borderColor: '#2E7D32',
   },

@@ -174,7 +174,7 @@ export default function EditProfileScreen() {
     <ScreenWrapper
       scrollable
       avoidKeyboard
-      scrollProps={{ contentContainerStyle: { flexGrow: 1, paddingBottom: theme.spacing.xl } }}
+      scrollProps={{ contentContainerStyle: { flexGrow: 1, paddingBottom: theme.spacing['3xl'] } }}
     >
       <View
         style={{

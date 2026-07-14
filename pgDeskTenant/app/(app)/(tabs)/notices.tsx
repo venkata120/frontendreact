@@ -6,6 +6,7 @@ import { useTheme } from '../../../src/hooks/useTheme';
 import { useTenant } from '../../../src/context/TenantContext';
 import { useNotices, useArchiveNotice } from '../../../src/hooks/queries/useNotices';
 import { formatDate } from '../../../src/utils/formatters';
+import { Storage } from '../../../src/services/storage';
 import type { NoticeBoard, NoticeType } from '../../../src/types';
 
 const NOTICE_TYPES: NoticeType[] = [
@@ -42,6 +43,28 @@ export default function NoticesScreen() {
   const [readIds, setReadIds] = useState<Set<number>>(new Set());
   const [pinnedIds, setPinnedIds] = useState<Set<number>>(new Set());
   const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const savedRead = await Storage.getObject<number[]>('tenant_notice_read_ids');
+      const savedPinned = await Storage.getObject<number[]>('tenant_notice_pinned_ids');
+      if (!mounted) return;
+      if (savedRead) setReadIds(new Set(savedRead));
+      if (savedPinned) setPinnedIds(new Set(savedPinned));
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    Storage.setObject('tenant_notice_read_ids', Array.from(readIds));
+  }, [readIds]);
+
+  useEffect(() => {
+    Storage.setObject('tenant_notice_pinned_ids', Array.from(pinnedIds));
+  }, [pinnedIds]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 500);
@@ -200,9 +223,11 @@ export default function NoticesScreen() {
                       <TouchableOpacity onPress={() => togglePin(notice)} style={{ marginRight: 8 }}>
                         <Ionicons name={isPinned ? 'pin' : 'pin-outline'} size={18} color={theme.colors.primary} />
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => confirmDelete(notice)}>
-                        <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-                      </TouchableOpacity>
+                      {notice.senderType === 'TENANT' && (
+                        <TouchableOpacity onPress={() => confirmDelete(notice)}>
+                          <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
 

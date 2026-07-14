@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
 import { ScreenWrapper, Typography, Button, OTPInput, Header } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
@@ -17,6 +17,7 @@ function maskMobile(mobile: string) {
 export default function OTPScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { height } = useWindowDimensions();
   const { mobile } = useLocalSearchParams<{ mobile?: string }>();
   const { verifyOtp, resendOtp, otpReqId, otpLoading, loading, error, resetError } = useAuth();
 
@@ -72,6 +73,18 @@ export default function OTPScreen() {
     <ScreenWrapper avoidKeyboard scrollable>
       <Header onBack={() => router.back()} />
       <View style={{ flex: 1, paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg }}>
+        <Image
+          source={require('../../assets/images/otp-illustration.png')}
+          style={{
+            width: '100%',
+            height: height * 0.45,
+            alignSelf: 'center',
+            marginTop: theme.spacing.xl,
+            marginBottom: theme.spacing.lg,
+          }}
+          resizeMode="contain"
+        />
+
         <Typography variant="headline2" align="center">
           Enter OTP
         </Typography>

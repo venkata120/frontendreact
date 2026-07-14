@@ -57,9 +57,12 @@ export const ScreenWrapper: React.FC<Props> = ({
     </View>
   );
 
-  if (avoidKeyboard && Platform.OS === 'ios') {
+  if (avoidKeyboard) {
     return (
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         {wrapper}
       </KeyboardAvoidingView>
     );

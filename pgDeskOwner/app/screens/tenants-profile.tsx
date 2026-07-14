@@ -230,15 +230,6 @@ export default function TenantsProfileScreen() {
             </View>
           )}
 
-          {!isExited && (
-            <Button
-              title="Edit Tenant Details"
-              leftIcon={<Ionicons name="create-outline" size={20} color={theme.colors.white} />}
-              onPress={() => router.push({ pathname: '/screens/edit-tenant' as any, params: { id } })}
-              style={{ marginBottom: theme.spacing.lg }}
-            />
-          )}
-
           <View style={{ height: theme.spacing.xl }} />
         </View>
       </ScrollView>

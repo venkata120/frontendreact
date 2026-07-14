@@ -321,7 +321,7 @@ export default function RoomsScreen() {
         style={{
           position: 'absolute',
           right: theme.spacing.base,
-          bottom: insets.bottom + 16,
+          bottom: insets.bottom ,
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: theme.colors.primary,

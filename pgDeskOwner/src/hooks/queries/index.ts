@@ -7,6 +7,7 @@ export * from './useRentLedgers';
 export * from './useRentLedgersWithTenants';
 export * from './useManagers';
 export * from './useTenantsWithRooms';
+export * from './useActiveTenantsWithRooms';
 export * from './useRoomsWithBeds';
 export * from './usePendingDues';
 export * from './useGenerateMonthlyDues';

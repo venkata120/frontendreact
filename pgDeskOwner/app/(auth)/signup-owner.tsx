@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,7 +9,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 import { usersService } from '../../src/api/services';
 import { useState } from 'react';
-import { regex, messages, normalizeMobile, getApiErrorMessage } from '../../src/utils/validation';
+import { regex, messages, normalizeMobile, sanitizeMobile, getApiErrorMessage } from '../../src/utils/validation';
 
 const schema = z.object({
   fullName: z
@@ -122,138 +122,134 @@ export default function SignupOwnerScreen() {
           </Typography>
         </View>
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 180, paddingHorizontal: theme.spacing.base }}>
-            <View
-              style={{
-                backgroundColor: theme.colors.white,
-                borderRadius: theme.radius.xl,
-                padding: theme.spacing.lg,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 12,
-                elevation: 5,
-              }}
-            >
-              <Controller
-                control={control}
-                name="fullName"
-                render={({ field }) => (
-                  <Input
-                    label="Full Name *"
-                    placeholder="Enter full name"
-                    maxLength={50}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.fullName?.message}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="email"
-                render={({ field }) => (
-                  <Input
-                    label="Email *"
-                    placeholder="Enter email"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.email?.message}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="mobile"
-                render={({ field }) => (
-                  <Input
-                    label="Mobile Number *"
-                    placeholder="Enter mobile number"
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.mobile?.message}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="password"
-                render={({ field }) => (
-                  <Input
-                    label="Password *"
-                    placeholder="Enter password"
-                    secureTextEntry
-                    enableVisibilityToggle
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.password?.message}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <Input
-                    label="Confirm Password *"
-                    placeholder="Confirm password"
-                    secureTextEntry
-                    enableVisibilityToggle
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.confirmPassword?.message}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="aadhaar"
-                render={({ field }) => (
-                  <Input
-                    label="Aadhaar Number *"
-                    placeholder="Enter Aadhaar number"
-                    keyboardType="numeric"
-                    maxLength={12}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.aadhaar?.message}
-                  />
-                )}
-              />
-
-              {error && (
-                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.sm }}>
-                  {error}
-                </Typography>
-              )}
-            </View>
-          </ScrollView>
-
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: theme.spacing.base,
+            paddingBottom: theme.spacing.xl,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
           <View
             style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
               backgroundColor: theme.colors.white,
-              paddingHorizontal: theme.spacing.base,
-              paddingTop: theme.spacing.md,
-              paddingBottom: theme.spacing.lg,
+              borderRadius: theme.radius.xl,
+              padding: theme.spacing.lg,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 12,
+              elevation: 5,
             }}
           >
+            <Controller
+              control={control}
+              name="fullName"
+              render={({ field }) => (
+                <Input
+                  label="Full Name *"
+                  placeholder="Enter full name"
+                  maxLength={50}
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={errors.fullName?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="email"
+              render={({ field }) => (
+                <Input
+                  label="Email *"
+                  placeholder="Enter email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={errors.email?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="mobile"
+              render={({ field }) => (
+                <Input
+                  label="Mobile Number *"
+                  placeholder="Enter mobile number"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  value={field.value}
+                  onChangeText={(text) => field.onChange(sanitizeMobile(text))}
+                  error={errors.mobile?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="password"
+              render={({ field }) => (
+                <Input
+                  label="Password *"
+                  placeholder="Enter password"
+                  secureTextEntry
+                  enableVisibilityToggle
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={errors.password?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <Input
+                  label="Confirm Password *"
+                  placeholder="Confirm password"
+                  secureTextEntry
+                  enableVisibilityToggle
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={errors.confirmPassword?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="aadhaar"
+              render={({ field }) => (
+                <Input
+                  label="Aadhaar Number *"
+                  placeholder="Enter Aadhaar number"
+                  keyboardType="numeric"
+                  maxLength={12}
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={errors.aadhaar?.message}
+                />
+              )}
+            />
+
+            {error && (
+              <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.sm }}>
+                {error}
+              </Typography>
+            )}
+          </View>
+
+          <View style={{ paddingTop: theme.spacing.md }}>
             <Button title="Next" loading={loading} onPress={handleSubmit(onSubmit)} />
           </View>
-        </KeyboardAvoidingView>
+        </ScrollView>
       </View>
     </ScreenWrapper>
   );

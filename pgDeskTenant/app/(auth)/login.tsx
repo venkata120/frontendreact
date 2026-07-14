@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
-import { View, TouchableOpacity } from 'react-native';
+import { View, Image, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Button, Input, Header } from '../../src/components';
+import { ScreenWrapper, Typography, Button, Input } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useEffect } from 'react';
@@ -23,6 +23,7 @@ type FormData = z.infer<typeof schema>;
 export default function LoginScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { height } = useWindowDimensions();
   const { sendOtp, otpLoading, error, resetError, resetLoading } = useAuth();
 
   useEffect(() => {
@@ -46,8 +47,19 @@ export default function LoginScreen() {
 
   return (
     <ScreenWrapper avoidKeyboard scrollable>
-      <Header onBack={() => router.back()} />
       <View style={{ flex: 1, paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg }}>
+        <Image
+          source={require('../../assets/images/tenant-login-illustration.png')}
+          style={{
+            width: '100%',
+            height: height * 0.45,
+            alignSelf: 'center',
+            marginTop: theme.spacing.xl,
+            marginBottom: theme.spacing.lg,
+          }}
+          resizeMode="contain"
+        />
+
         <Typography variant="headline2" align="center">
           Welcome back Tenant!
         </Typography>

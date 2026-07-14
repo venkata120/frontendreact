@@ -127,7 +127,7 @@ export default function SignupScreen() {
         contentContainerStyle: {
           flexGrow: 1,
           paddingHorizontal: theme.spacing.base,
-          paddingBottom: theme.spacing.xl,
+          paddingBottom: theme.spacing['3xl'],
         },
       }}
     >

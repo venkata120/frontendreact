@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, SearchBar, HeroHeader } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
@@ -15,6 +16,7 @@ import type { FoodMenu } from '../../../src/types';
 export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { openDrawer } = useDrawer();
   const { selectedPg } = useSelectedPg();
@@ -53,7 +55,7 @@ export default function HomeScreen() {
     [pgSummary]
   );
 
-  const OVERVIEW_ITEMS = [
+  const GRID_ITEMS = [
     {
       label: 'Total Rooms',
       value: String(pgSummary?.totalRooms ?? 0),
@@ -71,22 +73,6 @@ export default function HomeScreen() {
       route: '/(app)/(tabs)/tenants',
     },
     {
-      label: 'Active Tenants',
-      value: String(pgSummary?.activeTenants ?? 0),
-      icon: 'people',
-      color: theme.colors.success,
-      bg: theme.colors.successSurface,
-      route: '/(app)/(tabs)/tenants',
-    },
-    {
-      label: 'Left Tenants',
-      value: String(leftTenants),
-      icon: 'person-remove',
-      color: theme.colors.textTertiary,
-      bg: theme.colors.backgroundSecondary,
-      route: '/screens/left-tenants-profile',
-    },
-    {
       label: 'Collected Amount',
       value: `₹${Math.round(pgSummary?.monthlyRevenue ?? overview?.totalMonthlyRevenue ?? 0).toLocaleString()}`,
       icon: 'cash-outline',
@@ -102,15 +88,9 @@ export default function HomeScreen() {
       bg: theme.colors.warningSurface,
       route: '/screens/pending-dues',
     },
-    {
-      label: 'Income',
-      value: `₹${Math.round(pgSummary?.monthlyRevenue ?? overview?.totalMonthlyRevenue ?? 0).toLocaleString()}`,
-      icon: 'cash',
-      color: '#00A63E',
-      bg: '#DCFCE7',
-      route: '/screens/income',
-    },
   ];
+
+  const incomeValue = `₹${Math.round(pgSummary?.monthlyRevenue ?? overview?.totalMonthlyRevenue ?? 0).toLocaleString()}`;
 
   const [activeTab, setActiveTab] = useState<'notices' | 'food'>('food');
 
@@ -134,7 +114,8 @@ export default function HomeScreen() {
 
   return (
     <ScreenWrapper edges={["bottom", "left", "right"]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <View style={{ flex: 1 }}>
+        <ScrollView showsVerticalScrollIndicator={false}>
         <HeroHeader
           avatarName={user?.name}
           onAvatarPress={openDrawer}
@@ -155,7 +136,7 @@ export default function HomeScreen() {
             <Typography variant="body" color={theme.colors.textMuted}>Loading overview...</Typography>
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-              {OVERVIEW_ITEMS.map((item) => (
+              {GRID_ITEMS.map((item) => (
                 <TouchableOpacity
                   key={item.label}
                   activeOpacity={0.8}
@@ -165,23 +146,11 @@ export default function HomeScreen() {
                 <Card
                   shadow="sm"
                   padding={theme.spacing.md}
-                  minHeight={108}
                   style={{ flex: 1, justifyContent: 'center' }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View
-                      style={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: 12,
-                        backgroundColor: item.bg,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Ionicons name={item.icon as any} size={24} color={item.color} />
-                    </View>
-                    <View style={{ marginLeft: theme.spacing.sm, flex: 1, flexShrink: 1 }}>
+                    <Ionicons name={item.icon as any} size={20} color={item.color} style={{ marginRight: 8 }} />
+                    <View style={{ flex: 1, flexShrink: 1 }}>
                       <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1} ellipsizeMode="tail">
                         {item.label}
                       </Typography>
@@ -189,13 +158,14 @@ export default function HomeScreen() {
                         {item.value}
                       </Typography>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
                   </View>
                 </Card>
                 </TouchableOpacity>
               ))}
             </View>
           )}
+
+
         </View>
 
         {/* Food Menu */}
@@ -371,6 +341,29 @@ export default function HomeScreen() {
 
         <View style={{ height: theme.spacing.xl }} />
       </ScrollView>
+
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => router.push('/screens/income' as any)}
+        style={{
+          position: 'absolute',
+          right: theme.spacing.base,
+          bottom: insets.bottom -20,
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: theme.colors.primary,
+          paddingVertical: 10,
+          paddingHorizontal: theme.spacing.md,
+          borderRadius: theme.radius.full,
+          ...theme.shadows.md,
+        }}
+      >
+        <Ionicons name="add-circle" size={20} color={theme.colors.white} />
+        <Typography variant="bodyMedium" color={theme.colors.white} style={{ marginLeft: 6, fontWeight: '600' }}>
+          Add Income
+        </Typography>
+      </TouchableOpacity>
+    </View>
     </ScreenWrapper>
   );
 }

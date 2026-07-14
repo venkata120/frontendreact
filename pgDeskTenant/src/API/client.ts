@@ -11,34 +11,36 @@ const REQUEST_TIMEOUT_MS = 15000;
 let _session: Session | null = null;
 
 function resolveBaseUrl(): string {
-  const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-  let url = envUrl || API_BASE_URL;
-  const userProvidedUrl = !!envUrl;
-
-  if (url.endsWith('/api/v1')) {
-    url = url.slice(0, -7);
+  // The base URL must be set in the .env file via EXPO_PUBLIC_API_URL.
+  // Constants.ts is the single source of truth for the raw value.
+  const url = API_BASE_URL.trim();
+  if (!url) {
+    console.error('[API] EXPO_PUBLIC_API_URL is not set in .env');
+    return '';
   }
 
-  if (userProvidedUrl) {
-    return url;
+  let normalizedUrl = url;
+
+  if (normalizedUrl.endsWith('/api/v1')) {
+    normalizedUrl = normalizedUrl.slice(0, -7);
   }
 
   const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri && url.includes('localhost')) {
+  if (hostUri && normalizedUrl.includes('localhost')) {
     const hostIp = hostUri.split(':')[0];
     if (hostIp) {
-      return url.replace(/localhost/g, hostIp);
+      return normalizedUrl.replace(/localhost/g, hostIp);
     }
   }
 
-  if (url.includes('localhost')) {
+  if (normalizedUrl.includes('localhost')) {
     if (Platform.OS === 'android') {
-      return url.replace(/localhost/g, '10.0.2.2');
+      return normalizedUrl.replace(/localhost/g, '10.0.2.2');
     }
-    return url.replace(/localhost/g, '127.0.0.1');
+    return normalizedUrl.replace(/localhost/g, '127.0.0.1');
   }
 
-  return url;
+  return normalizedUrl;
 }
 
 export const API_URL = resolveBaseUrl();
@@ -121,6 +123,11 @@ function logNetworkError(err: AxiosError, context: string) {
 }
 
 apiClient.interceptors.request.use(async (config) => {
+  if (!API_URL) {
+    return Promise.reject(
+      new Error('API base URL is not configured. Ensure EXPO_PUBLIC_API_URL is set in .env and the bundle was built with Expo CLI.')
+    );
+  }
   const session = await getSession();
   if (session?.accessToken) {
     config.headers.Authorization = `${session.tokenType || 'Bearer'} ${session.accessToken}`;

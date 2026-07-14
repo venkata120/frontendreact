@@ -186,7 +186,14 @@ export default function TenantsScreen() {
                   icon={item.icon}
                   color={item.color}
                   bg={item.bg}
-                  onPress={() => router.push(item.route as any)}
+                  onPress={() =>
+                    item.label === 'Active Tenants'
+                      ? router.push({
+                          pathname: '/screens/active-tenants' as any,
+                          params: { pgId: selectedPg?.id },
+                        })
+                      : router.push(item.route as any)
+                  }
                   style={{ width: '48%', marginBottom: theme.spacing.md }}
                 />
               ))}
@@ -240,7 +247,7 @@ export default function TenantsScreen() {
           onPress={() => router.push({ pathname: '/screens/add-tenant' as any, params: { pgId: selectedPg?.id } })}
           style={{
             position: 'absolute',
-            bottom: insets.bottom + theme.spacing.md,
+            bottom: insets.bottom -20,
             right: theme.spacing.base,
             flexDirection: 'row',
             alignItems: 'center',

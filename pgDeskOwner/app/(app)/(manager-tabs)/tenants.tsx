@@ -192,7 +192,14 @@ export default function ManagerTenantsScreen() {
                   icon={item.icon}
                   color={item.color}
                   bg={item.bg}
-                  onPress={() => router.push(item.route as any)}
+                  onPress={() =>
+                    item.label === 'Active Tenants'
+                      ? router.push({
+                          pathname: ROUTES.SCREENS.ACTIVE_TENANTS as any,
+                          params: { pgId: selectedPg?.id },
+                        })
+                      : router.push(item.route as any)
+                  }
                   style={{ width: '48%', marginBottom: theme.spacing.md }}
                 />
               ))}

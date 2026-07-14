@@ -54,7 +54,7 @@ export const Header: React.FC<Props> = ({
             </Typography>
           )}
           {subtitle && (
-            <Typography variant="caption" color={theme.colors.textMuted}>
+            <Typography variant="caption" color={textColor ? fg : theme.colors.textMuted}>
               {subtitle}
             </Typography>
           )}

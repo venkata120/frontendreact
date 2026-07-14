@@ -28,7 +28,7 @@ SplashScreen.preventAutoHideAsync();
 function RootLayoutNav() {
   const theme = useTheme();
   const router = useRouter();
-  const segments = useSegments();
+  const segments = useSegments() as string[];
   const { isAuthenticated, loading: authLoading } = useSelector((state: RootState) => state.auth);
   const { isLoading: tenantLoading } = useTenant();
 
@@ -39,9 +39,11 @@ function RootLayoutNav() {
   useEffect(() => {
     if (authLoading || tenantLoading) return;
     const inAuthGroup = segments[0] === '(auth)';
-    if (!isAuthenticated && !inAuthGroup) {
+    const inSplash = segments.length === 0 || segments[0] === 'index';
+
+    if (!isAuthenticated && !inAuthGroup && !inSplash) {
       router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
+    } else if (isAuthenticated && (inAuthGroup || inSplash)) {
       router.replace('/(app)/(tabs)');
     }
   }, [isAuthenticated, authLoading, tenantLoading, segments]);
@@ -49,6 +51,7 @@ function RootLayoutNav() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background } }}>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(app)" options={{ headerShown: false }} />
       </Stack>

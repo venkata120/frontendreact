@@ -88,7 +88,7 @@ export default function AddPropertyScreen() {
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [hasImageChanged, setHasImageChanged] = useState(false);
   const imageInitialized = useRef(false);
-  const priceInputRefs = useRef<Record<string, TextInput | null>>({});
+
 
   useEffect(() => {
     imageInitialized.current = false;
@@ -411,59 +411,66 @@ export default function AddPropertyScreen() {
               <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
                 Enter price details
               </Typography>
-              {SHARING_OPTIONS.filter((n) => n <= maxSharing).map((n) => (
-                <View
-                  key={n}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    height: 52,
-                    borderRadius: theme.radius.lg,
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    paddingHorizontal: theme.spacing.md,
-                    marginBottom: theme.spacing.sm,
-                  }}
-                >
-                  <Typography variant="bodyMedium" style={{ width: 80 }}>
-                    {n} Sharing
-                  </Typography>
-                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
-                    <Typography variant="bodyMedium" color={theme.colors.textMuted}>
-                      ₹
-                    </Typography>
-                    <TextInput
-                      ref={(el) => { priceInputRefs.current[String(n)] = el; }}
-                      value={prices[String(n)] || ''}
-                      onChangeText={(v) => updatePrice(n, v)}
-                      keyboardType="number-pad"
-                      maxLength={6}
-                      placeholder="00000"
-                      placeholderTextColor={theme.colors.placeholder}
+              {SHARING_OPTIONS.filter((n) => n <= maxSharing).map((n) => {
+                const priceError = errors.prices?.[String(n)]?.message;
+                return (
+                  <View
+                    key={n}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: priceError ? theme.colors.danger : theme.colors.borderLight,
+                      borderRadius: theme.radius.lg,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      paddingHorizontal: theme.spacing.md,
+                      marginBottom: theme.spacing.sm,
+                    }}
+                  >
+                    <View
                       style={{
-                        minWidth: 70,
-                        fontFamily: theme.fontFamilies.primary,
-                        fontSize: theme.fontSizes.base,
-                        color: theme.colors.text,
-                        marginHorizontal: theme.spacing.xs,
-                        textAlign: 'right',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        minHeight: 52,
+                        paddingVertical: theme.spacing.sm,
                       }}
-                    />
-                    <Typography variant="caption" color={theme.colors.textMuted} style={{ marginRight: theme.spacing.md }}>
-                      /month
-                    </Typography>
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => priceInputRefs.current[String(n)]?.focus()}
                     >
-                      <Typography variant="bodyMedium" color={theme.colors.primary}>
-                        Edit
+                      <Typography variant="bodyMedium" style={{ width: 90 }}>
+                        {n} Sharing
                       </Typography>
-                    </TouchableOpacity>
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+                        <Typography variant="bodyMedium" color={theme.colors.textMuted}>
+                          ₹
+                        </Typography>
+                        <TextInput
+                          value={prices[String(n)] || ''}
+                          onChangeText={(v) => updatePrice(n, v)}
+                          keyboardType="number-pad"
+                          maxLength={6}
+                          placeholder="Enter price"
+                          placeholderTextColor={theme.colors.placeholder}
+                          style={{
+                            minWidth: 90,
+                            fontFamily: theme.fontFamilies.primary,
+                            fontSize: theme.fontSizes.base,
+                            color: theme.colors.text,
+                            marginHorizontal: theme.spacing.xs,
+                            textAlign: 'right',
+                          }}
+                        />
+                        <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: theme.spacing.sm }}>
+                          /month
+                        </Typography>
+                      </View>
+                    </View>
+                    {priceError && (
+                      <Typography variant="caption" color={theme.colors.danger} style={{ marginBottom: theme.spacing.xs }}>
+                        {priceError}
+                      </Typography>
+                    )}
                   </View>
-                </View>
-              ))}
-              {errors.prices && (
+                );
+              })}
+              {errors.prices && !Object.values(errors.prices).some((e) => e?.message) && (
                 <Typography variant="caption" color={theme.colors.danger} style={{ marginBottom: theme.spacing.sm }}>
                   Please enter prices for all selected sharing options
                 </Typography>
@@ -577,7 +584,11 @@ export default function AddPropertyScreen() {
                   }}
                 >
                   {image ? (
-                    <Image source={{ uri: image.uri }} style={{ width: 120, height: 80, borderRadius: theme.radius.md }} />
+                    <Image
+                      source={{ uri: image.uri }}
+                      style={{ width: '100%', height: 180, borderRadius: theme.radius.md }}
+                      resizeMode="cover"
+                    />
                   ) : (
                     <>
                       <Ionicons name="cloud-upload-outline" size={32} color={theme.colors.primary} />

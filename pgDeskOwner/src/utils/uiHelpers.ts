@@ -19,14 +19,25 @@ export const confirmAction = (
 };
 
 export const callPhone = async (phoneNumber?: string | null) => {
-  if (!phoneNumber) return;
+  if (!phoneNumber) {
+    Alert.alert('No phone number', 'Phone number is not available.');
+    return;
+  }
   const cleaned = phoneNumber.replace(/\D/g, '');
-  if (!cleaned) return;
+  if (!cleaned) {
+    Alert.alert('No phone number', 'Phone number is not available.');
+    return;
+  }
   const url = `tel:${cleaned}`;
-  const supported = await Linking.canOpenURL(url);
-  if (supported) {
-    await Linking.openURL(url);
-  } else {
-    Alert.alert('Unable to call', 'No calling app is available on this device.');
+  try {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+    } else {
+      // Some devices report false even though the dialer works; try opening anyway.
+      await Linking.openURL(url);
+    }
+  } catch (err: any) {
+    Alert.alert('Unable to call', err?.message || 'No calling app is available on this device.');
   }
 };

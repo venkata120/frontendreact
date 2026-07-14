@@ -41,6 +41,7 @@ export const ROUTES = {
     ADD_ROOM: '/screens/add-room',
     TENANTS_PROFILE: '/screens/tenants-profile',
     EDIT_TENANT: '/screens/edit-tenant',
+    ACTIVE_TENANTS: '/screens/active-tenants',
     LEFT_TENANTS_PROFILE: '/screens/left-tenants-profile',
     LEFT_TENANTS_EMPTY: '/screens/left-tenants-profile-empty-state',
     PENDING_DUES: '/screens/pending-dues',

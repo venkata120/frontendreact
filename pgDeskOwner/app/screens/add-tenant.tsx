@@ -28,7 +28,7 @@ import { DatePicker } from '../../src/components/DatePicker/DatePicker';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useCreateTenant, useUpdateBedStatus } from '../../src/hooks/queries';
 import { useRoomsWithBeds } from '../../src/hooks/queries/useRoomsWithBeds';
-import { regex, messages, normalizeMobile, getApiErrorMessage } from '../../src/utils/validation';
+import { regex, messages, normalizeMobile, sanitizeMobile, getApiErrorMessage } from '../../src/utils/validation';
 
 const schema = z.object({
   fullName: z.string().min(1, messages.required('Full Name')).regex(regex.alphabetsOnly, messages.alphabetsOnly('Full Name')),
@@ -84,7 +84,7 @@ const Picker: React.FC<PickerProps> = ({ label, value, placeholder, options, onS
         <Ionicons name="chevron-down" size={18} color={theme.colors.textMuted} />
       </TouchableOpacity>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)} statusBarTranslucent>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }}>
           <View
             style={{
@@ -92,15 +92,27 @@ const Picker: React.FC<PickerProps> = ({ label, value, placeholder, options, onS
               borderTopLeftRadius: theme.radius.xl,
               borderTopRightRadius: theme.radius.xl,
               paddingBottom: 24,
-              maxHeight: '70%',
+              maxHeight: '80%',
             }}
           >
+            <View
+              style={{
+                alignSelf: 'center',
+                width: 40,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: theme.colors.border,
+                marginTop: theme.spacing.md,
+                marginBottom: theme.spacing.sm,
+              }}
+            />
             <View
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: theme.spacing.base,
+                paddingHorizontal: theme.spacing.base,
+                paddingBottom: theme.spacing.base,
                 borderBottomWidth: 1,
                 borderBottomColor: theme.colors.borderLight,
               }}
@@ -110,29 +122,44 @@ const Picker: React.FC<PickerProps> = ({ label, value, placeholder, options, onS
                 <Ionicons name="close" size={24} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
-            <FlatList
-              data={options}
-              keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    onSelect(item.value);
-                    setOpen(false);
-                  }}
-                  style={{
-                    padding: theme.spacing.base,
-                    borderBottomWidth: 1,
-                    borderBottomColor: theme.colors.borderLight,
-                    backgroundColor: item.value === value ? theme.colors.primarySurface : theme.colors.white,
-                  }}
-                >
-                  <Typography variant="bodyMedium" color={item.value === value ? theme.colors.primary : theme.colors.text}>
-                    {item.label}
-                  </Typography>
-                </TouchableOpacity>
-              )}
-            />
+            {options.length === 0 ? (
+              <View style={{ padding: theme.spacing.xl, alignItems: 'center' }}>
+                <Typography variant="body" color={theme.colors.textMuted}>
+                  No options available
+                </Typography>
+              </View>
+            ) : (
+              <FlatList
+                data={options}
+                keyExtractor={(item) => item.value}
+                renderItem={({ item }) => {
+                  const isSelected = item.value === value;
+                  return (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        onSelect(item.value);
+                        setOpen(false);
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: theme.spacing.base,
+                        borderBottomWidth: 1,
+                        borderBottomColor: theme.colors.borderLight,
+                        backgroundColor: isSelected ? theme.colors.primarySurface : theme.colors.white,
+                      }}
+                    >
+                      <Typography variant="bodyMedium" color={isSelected ? theme.colors.primary : theme.colors.text}>
+                        {item.label}
+                      </Typography>
+                      {isSelected && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -148,7 +175,7 @@ export default function AddTenantScreen() {
   const updateBedStatus = useUpdateBedStatus();
   const { data: rooms, isLoading: roomsLoading } = useRoomsWithBeds(pgId);
 
-  const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
+  const { control, handleSubmit, setValue, watch, trigger, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { joinDate: new Date().toISOString().slice(0, 10) },
   });
@@ -308,7 +335,7 @@ export default function AddTenantScreen() {
                       keyboardType="phone-pad"
                       maxLength={10}
                       value={field.value}
-                      onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))}
+                      onChangeText={(v) => field.onChange(sanitizeMobile(v))}
                       error={errors.phone?.message}
                       leftIcon="call-outline"
 
@@ -321,14 +348,28 @@ export default function AddTenantScreen() {
                 control={control}
                 name="email"
                 render={({ field }) => (
-                  <Input label="Email" placeholder="Enter email" keyboardType="email-address" autoCapitalize="none" value={field.value} onChangeText={field.onChange} error={errors.email?.message} leftIcon="mail-outline" />
+                  <Input
+                    label="Email"
+                    placeholder="Enter email"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={field.value}
+                    onChangeText={(v) => field.onChange(v.trim())}
+                    onBlur={() => {
+                      field.onBlur();
+                      trigger('email');
+                    }}
+                    error={errors.email?.message}
+                    leftIcon="mail-outline"
+                  />
                 )}
               />
               <Controller
                 control={control}
                 name="emergencyContact"
                 render={({ field }) => (
-                  <Input label="Emergency Contact" placeholder="Enter emergency contact" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))} error={errors.emergencyContact?.message} leftIcon="people-outline" />
+                  <Input label="Emergency Contact" placeholder="Enter emergency contact" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(sanitizeMobile(v))} error={errors.emergencyContact?.message} leftIcon="people-outline" />
                 )}
               />
               <Controller

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Image,
   StatusBar,
@@ -12,24 +12,27 @@ import { useSelector } from 'react-redux';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedProps,
   withTiming,
   withDelay,
-  withSpring,
+  Easing,
   interpolate,
 } from 'react-native-reanimated';
-import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { RootState } from '../src/redux/store';
 import { getRoleBasedRoute } from '../src/utils/roleRouting';
-import { Typography } from '../src/components';
+import { Button, Typography } from '../src/components';
 import { useAuth } from '../src/hooks/useAuth';
 import type { UserRole } from '../src/types';
 
-const BG_COLOR = '#25397C';
-const WAVE_COLOR = '#ECE4F1';
+const BACKGROUND = '#FFFFFF';
+const WAVE_COLOR = '#0A2A5E';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 const ROLES: { key: UserRole; label: string; image: any }[] = [
   { key: 'owner', label: 'Owner', image: require('../assets/images/Owner.png') },
-  { key: 'manager', label: 'Manager', image: require('../assets/images/Tenant.png') },
+  { key: 'manager', label: 'Manager', image: require('../assets/images/Manager.png') },
 ];
 
 export default function SplashScreen() {
@@ -38,13 +41,20 @@ export default function SplashScreen() {
   const { isAuthenticated, loading, userRole } = useSelector((state: RootState) => state.auth);
   const { width, height } = useWindowDimensions();
 
-  // Animation shared values
-  const bgBrightness = useSharedValue(0.73);
-  const mainWaveY = useSharedValue(height * 0.6);
-  const shadowWaveY = useSharedValue(height * 0.65);
-  const logoOpacity = useSharedValue(0.3);
-  const logoScale = useSharedValue(0.95);
-  const roleOpacity = useSharedValue(0);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+
+  const dipDepth = 80;
+  const initialBottom = height * 0.18;
+  const finalBottom = height;
+
+  const shapeBottomY = useSharedValue(initialBottom);
+  const logoOpacity = useSharedValue(0);
+  const logoScale = useSharedValue(0.9);
+  const questionOpacity = useSharedValue(0);
+  const cardsOpacity = useSharedValue(0);
+  const cardsTranslateY = useSharedValue(30);
+  const authOpacity = useSharedValue(0);
+  const authTranslateY = useSharedValue(20);
 
   useEffect(() => {
     if (loading) return;
@@ -54,126 +64,94 @@ export default function SplashScreen() {
       return;
     }
 
-    // Phase 1: Fade-in background (0-500ms)
-    bgBrightness.value = withTiming(1, { duration: 500 });
-
-    // Phase 2: Wave rise with elastic overshoot (500-1500ms)
-    mainWaveY.value = withDelay(
-      500,
-      withSpring(0, {
-        damping: 12,
-        stiffness: 80,
-        mass: 1,
-        overshootClamping: false,
-      })
-    );
-
-    // Phase 3: Shadow settle (1000-2000ms)
-    shadowWaveY.value = withDelay(
+    // Wave shape expands downward from ~18% to full screen.
+    shapeBottomY.value = withDelay(
       600,
-      withSpring(14, {
-        damping: 14,
-        stiffness: 70,
-        mass: 1.2,
+      withTiming(finalBottom, {
+        duration: 1400,
+        easing: Easing.out(Easing.quad),
       })
     );
 
-    // Phase 4: Logo stabilize (1000-3300ms)
-    logoOpacity.value = withDelay(1000, withTiming(1, { duration: 1500 }));
-    logoScale.value = withDelay(1000, withTiming(1, { duration: 1500 }));
+    // Logo fades in once the wave has room for it.
+    logoOpacity.value = withDelay(800, withTiming(1, { duration: 500 }));
+    logoScale.value = withDelay(800, withTiming(1, { duration: 500 }));
 
-    // Phase 5: Role selection reveal (after splash animation completes)
-    roleOpacity.value = withDelay(3400, withTiming(1, { duration: 600 }));
-  }, [loading, isAuthenticated, userRole, router, bgBrightness, mainWaveY, shadowWaveY, logoOpacity, logoScale, roleOpacity]);
+    // Role selection reveals after the wave fills the screen.
+    questionOpacity.value = withDelay(2400, withTiming(1, { duration: 500 }));
+    cardsOpacity.value = withDelay(2700, withTiming(1, { duration: 500 }));
+    cardsTranslateY.value = withDelay(2700, withTiming(0, { duration: 500 }));
+  }, [loading, isAuthenticated, userRole, router, shapeBottomY, logoOpacity, logoScale, questionOpacity, cardsOpacity, cardsTranslateY, finalBottom]);
 
-  const bgAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(bgBrightness.value, [0.73, 1], [0.3, 1]),
-  }));
+  useEffect(() => {
+    if (selectedRole) {
+      authOpacity.value = withTiming(1, { duration: 400 });
+      authTranslateY.value = withTiming(0, { duration: 400 });
+    } else {
+      authOpacity.value = 0;
+      authTranslateY.value = 20;
+    }
+  }, [selectedRole, authOpacity, authTranslateY]);
 
-  const mainWaveAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: mainWaveY.value }],
-  }));
-
-  const shadowWaveAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: shadowWaveY.value }],
-  }));
+  const animatedProps = useAnimatedProps(() => {
+    const y = shapeBottomY.value;
+    const d = `
+      M 0,0
+      H ${width}
+      V ${y}
+      C ${width * 0.85},${y} ${width * 0.6},${y + dipDepth} ${width * 0.5},${y + dipDepth}
+      C ${width * 0.4},${y + dipDepth} ${width * 0.15},${y} 0,${y}
+      Z
+    `;
+    return { d };
+  });
 
   const logoAnimatedStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
     transform: [{ scale: logoScale.value }],
   }));
 
-  const roleAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: roleOpacity.value,
-    transform: [{ translateY: interpolate(roleOpacity.value, [0, 1], [30, 0]) }],
+  const questionAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: questionOpacity.value,
+    transform: [{ translateY: interpolate(questionOpacity.value, [0, 1], [15, 0]) }],
   }));
 
-  const handleRolePress = (role: UserRole) => {
+  const cardsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: cardsOpacity.value,
+    transform: [{ translateY: cardsTranslateY.value }],
+  }));
+
+  const authAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: authOpacity.value,
+    transform: [{ translateY: authTranslateY.value }],
+  }));
+
+  const handleSelectRole = (role: UserRole) => {
     selectRole(role);
-    router.replace('/(auth)/login');
+    setSelectedRole(role);
   };
 
-  // Wave edge with two gentle dips (local minima)
-  const waveBaseY = height * 0.65;
-  const leftY = waveBaseY;
-  const dip1X = width * 0.3;
-  const dip1Y = waveBaseY + 50;
-  const crestX = width * 0.55;
-  const crestY = waveBaseY - 30;
-  const dip2X = width * 0.8;
-  const dip2Y = waveBaseY + 40;
-  const rightY = waveBaseY + 10;
+  const handleSignUp = () => {
+    router.push('/(auth)/signup-owner');
+  };
 
-  const mainWavePath = `
-    M -40,${height}
-    L -40,${leftY}
-    C ${width * 0.1},${leftY} ${dip1X - 40},${dip1Y} ${dip1X},${dip1Y}
-    C ${dip1X + 50},${dip1Y} ${crestX - 60},${crestY} ${crestX},${crestY}
-    C ${crestX + 60},${crestY} ${dip2X - 50},${dip2Y} ${dip2X},${dip2Y}
-    C ${dip2X + 40},${dip2Y} ${width * 0.95},${rightY} ${width + 40},${rightY}
-    L ${width + 40},${height}
-    Z
-  `;
-
-  // Shadow wave path — same contour but offset and slightly softer
-  const shadowWavePath = `
-    M -40,${height}
-    L -40,${leftY + 10}
-    C ${width * 0.1},${leftY + 10} ${dip1X - 40},${dip1Y + 10} ${dip1X},${dip1Y + 10}
-    C ${dip1X + 50},${dip1Y + 10} ${crestX - 60},${crestY + 10} ${crestX},${crestY + 10}
-    C ${crestX + 60},${crestY + 10} ${dip2X - 50},${dip2Y + 10} ${dip2X},${dip2Y + 10}
-    C ${dip2X + 40},${dip2Y + 10} ${width * 0.95},${rightY + 10} ${width + 40},${rightY + 10}
-    L ${width + 40},${height}
-    Z
-  `;
+  const handleLogin = () => {
+    router.push('/(auth)/login');
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      {/* Base layer */}
-      <Animated.View style={[styles.background, bgAnimatedStyle]} />
+      {/* White base layer */}
+      <View style={styles.background} />
 
-      {/* Shadow wave layer */}
-      <Animated.View style={[styles.waveContainer, shadowWaveAnimatedStyle]} pointerEvents="none">
-        <Svg width={width + 80} height={height} viewBox={`-40 0 ${width + 80} ${height}`} preserveAspectRatio="none">
-          <Defs>
-            <LinearGradient id="shadowGradient" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor="#374DA4" stopOpacity="0.8" />
-              <Stop offset="50%" stopColor="#ACB1D6" stopOpacity="0.6" />
-              <Stop offset="100%" stopColor="#ECE4F1" stopOpacity="0" />
-            </LinearGradient>
-          </Defs>
-          <Path d={shadowWavePath} fill="url(#shadowGradient)" />
+      {/* Expanding wave layer */}
+      <View style={styles.waveContainer} pointerEvents="none">
+        <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+          <AnimatedPath animatedProps={animatedProps} fill={WAVE_COLOR} />
         </Svg>
-      </Animated.View>
-
-      {/* Main wave layer */}
-      <Animated.View style={[styles.waveContainer, mainWaveAnimatedStyle]} pointerEvents="none">
-        <Svg width={width + 80} height={height} viewBox={`-40 0 ${width + 80} ${height}`} preserveAspectRatio="none">
-          <Path d={mainWavePath} fill={WAVE_COLOR} />
-        </Svg>
-      </Animated.View>
+      </View>
 
       {/* Logo */}
       <View style={styles.logoContainer} pointerEvents="none">
@@ -187,26 +165,60 @@ export default function SplashScreen() {
       </View>
 
       {/* Role selection */}
-      <Animated.View style={[styles.rolesWrapper, roleAnimatedStyle]}>
-        <Typography variant="title1" color="#FFFFFF" style={styles.question}>
-          Which Describes you ?
-        </Typography>
-        <View style={styles.rolesRow}>
-          {ROLES.map((role) => (
-            <TouchableOpacity
-              key={role.key}
-              activeOpacity={0.85}
-              onPress={() => handleRolePress(role.key)}
-              style={styles.roleButton}
-            >
-              <Image source={role.image} style={styles.roleImage} resizeMode="contain" />
-              <Typography variant="bodyMedium" color="#FFFFFF" style={styles.roleLabel}>
-                {role.label}
+      <View style={styles.rolesWrapper} pointerEvents="box-none">
+        <Animated.View style={questionAnimatedStyle}>
+          <Typography variant="title1" color="#FFFFFF" style={styles.question}>
+            Which Describes you ?
+          </Typography>
+        </Animated.View>
+
+        <Animated.View style={[styles.rolesRow, cardsAnimatedStyle]}>
+          {ROLES.map((role) => {
+            const isSelected = selectedRole === role.key;
+            return (
+              <View
+                key={role.key}
+                style={[styles.roleCard, isSelected && styles.roleCardSelected]}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => handleSelectRole(role.key)}
+                  style={styles.roleButton}
+                >
+                  <Image source={role.image} style={styles.roleImage} resizeMode="contain" />
+                  <Typography variant="bodyMedium" color="#FFFFFF" style={styles.roleLabel}>
+                    {role.label}
+                  </Typography>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </Animated.View>
+
+        <Animated.View
+          style={[styles.authOptions, authAnimatedStyle]}
+          pointerEvents={selectedRole ? 'auto' : 'none'}
+        >
+          <Button
+            title="Sign up"
+            onPress={handleSignUp}
+            fullWidth
+            style={styles.signupButton}
+            textColor="#FFFFFF"
+          />
+
+          <View style={styles.loginRow}>
+            <Typography variant="bodyMedium" color="rgba(255, 255, 255, 0.8)">
+              Already have an account ?{' '}
+            </Typography>
+            <TouchableOpacity onPress={handleLogin} activeOpacity={0.7}>
+              <Typography variant="bodyMedium" color="#FFFFFF" style={styles.loginText}>
+                LOGIN
               </Typography>
             </TouchableOpacity>
-          ))}
-        </View>
-      </Animated.View>
+          </View>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -217,13 +229,13 @@ const styles = StyleSheet.create({
   },
   background: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: BG_COLOR,
+    backgroundColor: BACKGROUND,
   },
   waveContainer: {
     position: 'absolute',
     top: 0,
-    left: -40,
-    right: -40,
+    left: 0,
+    right: 0,
     bottom: 0,
   },
   logoContainer: {
@@ -232,7 +244,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingTop: '35%',
+    paddingTop: '28%',
   },
   logo: {
     width: 180,
@@ -240,11 +252,10 @@ const styles = StyleSheet.create({
   },
   rolesWrapper: {
     position: 'absolute',
-    bottom: 0,
+    top: '54%',
     left: 0,
     right: 0,
     paddingHorizontal: 24,
-    paddingBottom: '8%',
     alignItems: 'center',
   },
   question: {
@@ -255,18 +266,50 @@ const styles = StyleSheet.create({
   rolesRow: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'flex-start',
     width: '100%',
+  },
+  roleCard: {
+    padding: 8,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    marginHorizontal: 12,
+  },
+  roleCardSelected: {
+    borderColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   roleButton: {
     alignItems: 'center',
-    marginHorizontal: 16,
   },
   roleImage: {
-    width: 120,
-    height: 120,
+    width: 150,
+    height: 150,
   },
   roleLabel: {
     marginTop: 8,
     fontWeight: '600',
+    fontSize: 16,
+  },
+  authOptions: {
+    width: '100%',
+    marginTop: 28,
+    alignItems: 'center',
+  },
+  signupButton: {
+    backgroundColor: '#208AEF',
+    borderRadius: 28,
+    height: 52,
+  },
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  loginText: {
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

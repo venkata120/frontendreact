@@ -1,7 +1,7 @@
 export const regex = {
   alphabetsOnly: /^(?=.*[A-Za-z])[A-Za-z\s]+$/,
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  mobile: /^\d{10}$/,
+  mobile: /^[6-9]\d{9}$/,
   aadhaar: /^\d{12}$/,
   digitsOnly: /^\d+$/,
   positiveInteger: /^[1-9]\d*$/,
@@ -14,7 +14,7 @@ export const messages = {
   exactLength: (field: string, length: number) => `${field} must be exactly ${length} digits`,
   alphabetsOnly: (field: string) => `${field} should contain only alphabets and spaces`,
   validEmail: (field: string = 'Email') => `Enter a valid ${field.toLowerCase()}`,
-  validMobile: (field: string = 'Mobile Number') => `${field} must be exactly 10 digits`,
+  validMobile: (field: string = 'Mobile Number') => `${field} must be a valid 10-digit number starting with 6-9`,
   validAadhaar: () => 'Aadhaar Number must be exactly 12 digits',
   validNumber: (field: string) => `${field} must be a valid number`,
   passwordMatch: () => 'Passwords do not match',
@@ -27,6 +27,14 @@ export const normalizeMobile = (mobile: string): string => {
   // Keep the last 10 digits so the stored value matches the 10-digit login
   // format expected by the OTP endpoint.
   if (digits.length > 10) return digits.slice(-10);
+  return digits;
+};
+
+export const sanitizeMobile = (text: string): string => {
+  let digits = text.replace(/\D/g, '').slice(0, 10);
+  if (digits && !/^[6-9]/.test(digits)) {
+    digits = digits.slice(1);
+  }
   return digits;
 };
 

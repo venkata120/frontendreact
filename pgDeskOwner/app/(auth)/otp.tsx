@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { View, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, TouchableOpacity, Image, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
 import { useSelector } from 'react-redux';
 import { ScreenWrapper, Typography, Button, Header, OTPInput } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
@@ -13,6 +13,7 @@ const RESEND_TIMEOUT_SECONDS = 30;
 export default function OTPScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { height } = useWindowDimensions();
   const { mobile } = useLocalSearchParams<{ mobile: string }>();
   const { verifyOtp, resendOtp, loading, otpLoading, error, resetError, isAuthenticated, userRole } = useAuth();
   const reqId = useSelector((state: RootState) => state.auth.otpReqId);
@@ -66,6 +67,17 @@ export default function OTPScreen() {
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
+          <Image
+            source={require('../../assets/images/otp-illustration.png')}
+            style={{
+              width: '100%',
+              height: height * 0.45,
+              alignSelf: 'center',
+              marginBottom: theme.spacing.lg,
+            }}
+            resizeMode="contain"
+          />
+
           <Typography variant="headline2" align="center">
             Enter OTP
           </Typography>

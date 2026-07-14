@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, Modal, Alert } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -243,48 +243,23 @@ export default function AddRoomScreen() {
               )}
 
               {/* Base rent per bed */}
-              <Typography variant="bodyMedium" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
-                Base Rent per Bed
-              </Typography>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  height: 52,
-                  borderRadius: theme.radius.lg,
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  paddingHorizontal: theme.spacing.md,
-                  borderWidth: 1,
-                  borderColor: theme.colors.borderLight,
+              <Input
+                label="Base Rent per Bed"
+                placeholder="Enter base rent per bed"
+                keyboardType="number-pad"
+                maxLength={8}
+                value={baseRent}
+                onChangeText={(v) => {
+                  setBaseRent(v.replace(/[^0-9]/g, ''));
+                  if (errors.baseRent) setErrors((prev) => ({ ...prev, baseRent: '' }));
                 }}
-              >
-                <Typography variant="bodyMedium" color={theme.colors.textMuted} style={{ marginRight: theme.spacing.sm }}>
-                  ₹
-                </Typography>
-                <TextInput
-                  value={baseRent}
-                  onChangeText={(v) => {
-                    setBaseRent(v.replace(/[^0-9]/g, ''));
-                    if (errors.baseRent) setErrors((prev) => ({ ...prev, baseRent: '' }));
-                  }}
-                  keyboardType="number-pad"
-                  maxLength={8}
-                  placeholder="Enter base rent per bed"
-                  placeholderTextColor={theme.colors.placeholder}
-                  style={{
-                    flex: 1,
-                    fontFamily: theme.fontFamilies.primary,
-                    fontSize: theme.fontSizes.base,
-                    color: theme.colors.text,
-                  }}
-                />
-              </View>
-
-              {errors.baseRent && (
-                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: theme.spacing.xs }}>
-                  {errors.baseRent}
-                </Typography>
-              )}
+                error={errors.baseRent}
+                leftIcon={
+                  <Typography variant="bodyMedium" color={theme.colors.textMuted}>
+                    ₹
+                  </Typography>
+                }
+              />
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.md }}>
                 <Ionicons name="information-circle-outline" size={16} color={theme.colors.secondary} />
