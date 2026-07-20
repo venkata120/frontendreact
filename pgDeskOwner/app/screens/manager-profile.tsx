@@ -15,6 +15,8 @@ interface DisplayInfo {
   name?: string;
   email?: string;
   mobile?: string;
+  role?: string;
+  shift?: string;
 }
 
 export default function ManagerProfileScreen() {
@@ -45,6 +47,8 @@ export default function ManagerProfileScreen() {
         name: selectedManager.name,
         email: selectedManager.email,
         mobile: selectedManager.mobile,
+        role: selectedManager.role,
+        shift: selectedManager.shift,
       };
     }
     if (assignment) {
@@ -150,6 +154,16 @@ export default function ManagerProfileScreen() {
             />
             <Typography variant="headline2" style={{ marginTop: theme.spacing.md }}>{displayInfo?.name || displayInfo?.email || 'No Manager Assigned'}</Typography>
             <Typography variant="body" color={theme.colors.textMuted}>{displayInfo?.email || selectedPg?.name || 'Assign a manager to manage this property'}</Typography>
+
+            {displayInfo?.role && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.sm }}>
+                <Ionicons name="briefcase-outline" size={14} color={theme.colors.textMuted} style={{ marginRight: 4 }} />
+                <Typography variant="caption" color={theme.colors.textMuted}>
+                  {displayInfo.role.charAt(0).toUpperCase() + displayInfo.role.slice(1)}
+                  {displayInfo.shift ? ` · ${displayInfo.shift}` : ''}
+                </Typography>
+              </View>
+            )}
 
             {displayInfo && (
               <View

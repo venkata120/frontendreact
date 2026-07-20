@@ -11,6 +11,7 @@ import { useSelectedPg } from '../../src/context/SelectedPgContext';
 import { useCreateManager, useAssignManager } from '../../src/hooks/queries';
 import { Ionicons } from '@expo/vector-icons';
 import { regex, messages, normalizeMobile, getApiErrorMessage } from '../../src/utils/validation';
+import type { UserRole } from '../../src/types';
 
 const schema = z.object({
   fullName: z
@@ -30,10 +31,17 @@ const schema = z.object({
     .min(1, messages.required('Password'))
     .min(6, messages.minLength('Password', 6)),
   address: z.string().max(200, 'Address must not exceed 200 characters').optional(),
+  role: z.string().min(1, 'Role is required'),
+  shift: z.string().min(1, 'Shift is required'),
 });
 
 const MAX_NAME_LENGTH = 50;
 const MAX_ADDRESS_LENGTH = 200;
+
+const ROLE_OPTIONS: { label: string; value: UserRole }[] = [
+  { label: 'Manager', value: 'manager' },
+];
+const SHIFT_OPTIONS = ['Morning', 'Evening', 'Night', 'Full-time'];
 
 type FormData = z.infer<typeof schema>;
 
@@ -46,9 +54,16 @@ export default function AssignManagerScreen() {
   const assignManager = useAssignManager();
   const qc = useQueryClient();
 
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      role: 'manager',
+      shift: 'Full-time',
+    },
   });
+
+  const selectedRole = watch('role');
+  const selectedShift = watch('shift');
 
   const onSubmit = async (data: FormData) => {
     if (!user?.id || !selectedPg?.id) return;
@@ -60,8 +75,9 @@ export default function AssignManagerScreen() {
           email: data.email,
           password: data.password,
           mobile: normalizeMobile(data.phone),
-          role: 'manager',
+          role: data.role as UserRole,
           active: true,
+          shift: data.shift,
         },
       });
       if (manager?.id) {
@@ -148,6 +164,71 @@ export default function AssignManagerScreen() {
               <Controller control={control} name="password" render={({ field }) => (
                 <Input label="Password *" placeholder="Set login password" secureTextEntry enableVisibilityToggle value={field.value} onChangeText={field.onChange} error={errors.password?.message} />
               )} />
+
+              {/* Role selection */}
+              <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>Role *</Typography>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: theme.spacing.base }}>
+                {ROLE_OPTIONS.map((option) => {
+                  const isSelected = selectedRole === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      activeOpacity={0.8}
+                      onPress={() => setValue('role', option.value, { shouldValidate: true })}
+                      style={{
+                        paddingHorizontal: theme.spacing.md,
+                        paddingVertical: theme.spacing.sm,
+                        borderRadius: theme.radius.full,
+                        backgroundColor: isSelected ? theme.colors.secondary : theme.colors.backgroundSecondary,
+                        borderWidth: 1,
+                        borderColor: isSelected ? theme.colors.secondary : theme.colors.borderLight,
+                        marginRight: theme.spacing.sm,
+                        marginBottom: theme.spacing.sm,
+                      }}
+                    >
+                      <Typography variant="bodyMedium" color={isSelected ? theme.colors.white : theme.colors.text}>{option.label}</Typography>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {errors.role && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                  {errors.role.message}
+                </Typography>
+              )}
+
+              {/* Shift selection */}
+              <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>Shift *</Typography>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: theme.spacing.base }}>
+                {SHIFT_OPTIONS.map((shift) => {
+                  const isSelected = selectedShift === shift;
+                  return (
+                    <TouchableOpacity
+                      key={shift}
+                      activeOpacity={0.8}
+                      onPress={() => setValue('shift', shift, { shouldValidate: true })}
+                      style={{
+                        paddingHorizontal: theme.spacing.md,
+                        paddingVertical: theme.spacing.sm,
+                        borderRadius: theme.radius.full,
+                        backgroundColor: isSelected ? theme.colors.secondary : theme.colors.backgroundSecondary,
+                        borderWidth: 1,
+                        borderColor: isSelected ? theme.colors.secondary : theme.colors.borderLight,
+                        marginRight: theme.spacing.sm,
+                        marginBottom: theme.spacing.sm,
+                      }}
+                    >
+                      <Typography variant="bodyMedium" color={isSelected ? theme.colors.white : theme.colors.text}>{shift}</Typography>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {errors.shift && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                  {errors.shift.message}
+                </Typography>
+              )}
+
               <Controller control={control} name="address" render={({ field }) => (
                 <Input label="Address" placeholder="Enter address" multiline numberOfLines={3} inputStyle={{ height: 80, textAlignVertical: 'top' }} maxLength={MAX_ADDRESS_LENGTH} value={field.value} onChangeText={field.onChange} error={errors.address?.message} />
               )} />

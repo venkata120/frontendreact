@@ -2,7 +2,8 @@ import { useRouter } from 'expo-router';
 import { View, ScrollView, TouchableOpacity, Modal, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ScreenWrapper,
   Header,
@@ -91,6 +92,18 @@ export default function NoticeBoardScreen() {
   const [publishTill, setPublishTill] = useState<string>('');
   const [formError, setFormError] = useState('');
   const [dateField, setDateField] = useState<'publishFrom' | 'publishTill' | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        if (modalVisible) {
+          resetForm();
+          setModalVisible(false);
+          setFilterVisible(false);
+        }
+      };
+    }, [modalVisible])
+  );
 
   const searchPayload = useMemo(
     () =>
@@ -507,6 +520,7 @@ export default function NoticeBoardScreen() {
           paddingHorizontal: theme.spacing.md,
           borderRadius: theme.radius.full,
           ...theme.shadows.md,
+          opacity: modalVisible ? 0 : 1,
         }}
       >
         <Ionicons name="add" size={22} color={theme.colors.white} />

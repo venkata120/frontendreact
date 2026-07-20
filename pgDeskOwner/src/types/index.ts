@@ -96,6 +96,8 @@ export interface User {
   securityCode?: string;
   securityCodeExpiry?: string;
   securityCodeAttempts?: number;
+  shift?: string;
+  department?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -109,6 +111,8 @@ export interface UserDTO {
   active: boolean;
   mobile?: string;
   ownerId?: string;
+  shift?: string;
+  department?: string;
 }
 
 export interface ForgotPasswordRequest {

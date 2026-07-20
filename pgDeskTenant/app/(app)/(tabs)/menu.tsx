@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { View, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, SearchBar } from '../../../src/components';
@@ -26,6 +27,7 @@ const FOOD_TYPE_OPTIONS: { label: string; value: FoodType | 'ALL' }[] = [
 
 export default function MenuScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { propertyId } = useTenant();
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const { data: dailyMenu, isLoading } = useDailyFoodMenu(propertyId ?? undefined, today);
@@ -69,7 +71,16 @@ export default function MenuScreen() {
           paddingHorizontal: theme.spacing.base,
         }}
       >
-        <Typography variant="headline2" color={theme.colors.white}>Food Menu</Typography>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.navigate('/(app)/(tabs)')}
+            style={{ marginRight: theme.spacing.sm }}
+          >
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+          <Typography variant="headline2" color={theme.colors.white}>Food Menu</Typography>
+        </View>
       </View>
 
       <ScrollView

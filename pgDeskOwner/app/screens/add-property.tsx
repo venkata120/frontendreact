@@ -29,7 +29,7 @@ import {
 } from '../../src/hooks/queries';
 import { profileService } from '../../src/api/services';
 import { getApiErrorMessage } from '../../src/utils/validation';
-import type { Property } from '../../src/types';
+import type { Property, ProfileUploadResponse } from '../../src/types';
 
 const SHARING_OPTIONS = [1, 2, 3, 4, 5];
 
@@ -85,14 +85,14 @@ export default function AddPropertyScreen() {
   const updateProperty = useUpdateProperty();
   const uploadPropertyImage = useUploadPropertyImage();
 
-  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [images, setImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [hasImageChanged, setHasImageChanged] = useState(false);
   const imageInitialized = useRef(false);
 
 
   useEffect(() => {
     imageInitialized.current = false;
-    setImage(null);
+    setImages([]);
     setHasImageChanged(false);
   }, [propertyId]);
 
@@ -116,7 +116,7 @@ export default function AddPropertyScreen() {
     defaultValues: {
       pgType: 'MEN',
       maxSharing: 3,
-      prices: {},
+      prices: Object.fromEntries(SHARING_OPTIONS.map((n) => [String(n), ''])),
     },
   });
 
@@ -152,11 +152,13 @@ export default function AddPropertyScreen() {
     const imageUrl = propertyImageDownload?.presignedUrl;
     if (imageUrl && !imageInitialized.current) {
       imageInitialized.current = true;
-      setImage({
-        uri: imageUrl,
-        fileName: 'property.jpg',
-        mimeType: 'image/jpeg',
-      } as ImagePicker.ImagePickerAsset);
+      setImages([
+        {
+          uri: imageUrl,
+          fileName: 'property.jpg',
+          mimeType: 'image/jpeg',
+        } as ImagePicker.ImagePickerAsset,
+      ]);
       // Only seed the context if no uploaded/picked URI is already present.
       if (!propertyImageUri) {
         setPropertyImageUri(imageUrl);
@@ -165,7 +167,7 @@ export default function AddPropertyScreen() {
   }, [existingProperty, propertyImageDownload?.presignedUrl, reset, setPropertyImageUri, propertyImageUri]);
 
   const toggleSharing = (n: number) => {
-    setValue('maxSharing', n, { shouldValidate: true });
+    setValue('maxSharing', n, { shouldValidate: false });
   };
 
   const updatePrice = (sharing: number, value: string) => {
@@ -178,15 +180,33 @@ export default function AddPropertyScreen() {
     if (status !== 'granted') return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: false,
+      allowsMultipleSelection: true,
       quality: 0.8,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      setImage(asset);
+      const newAssets = result.assets.slice(0, 5);
+      setImages((prev) => {
+        const combined = [...prev, ...newAssets].slice(0, 5);
+        if (combined[0]) {
+          setPropertyImageUri(combined[0].uri);
+        }
+        return combined;
+      });
       setHasImageChanged(true);
-      setPropertyImageUri(asset.uri);
     }
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      if (next[0]) {
+        setPropertyImageUri(next[0].uri);
+      } else {
+        setPropertyImageUri('');
+      }
+      return next;
+    });
+    setHasImageChanged(true);
   };
 
   const buildPayload = (data: FormData): Omit<Property, 'id' | 'createdAt' | 'updatedAt'> => {
@@ -226,16 +246,19 @@ export default function AddPropertyScreen() {
         targetPropertyId = property.id;
       }
 
-      if (image && (!isEditMode || hasImageChanged) && targetPropertyId) {
+      if (images.length > 0 && (!isEditMode || hasImageChanged) && targetPropertyId) {
         try {
-          const uploadResponse = await uploadPropertyImage.mutateAsync({
-            id: targetPropertyId,
-            file: {
-              uri: image.uri,
-              name: image.fileName || 'property.jpg',
-              type: image.mimeType || 'image/jpeg',
-            },
-          });
+          let lastUploadResponse: ProfileUploadResponse | undefined;
+          for (const img of images) {
+            lastUploadResponse = await uploadPropertyImage.mutateAsync({
+              id: targetPropertyId,
+              file: {
+                uri: img.uri,
+                name: img.fileName || 'property.jpg',
+                type: img.mimeType || 'image/jpeg',
+              },
+            });
+          }
 
           // Fetch the latest presigned URL (with cache-buster) so the image is
           // reflected immediately in HeroHeader.
@@ -250,8 +273,8 @@ export default function AddPropertyScreen() {
           if (presignedUrl) {
             const separator = presignedUrl.includes('?') ? '&' : '?';
             setPropertyImageUri(`${presignedUrl}${separator}t=${Date.now()}`);
-          } else if (uploadResponse?.objectUrl) {
-            setPropertyImageUri(uploadResponse.objectUrl);
+          } else if (lastUploadResponse?.objectUrl) {
+            setPropertyImageUri(lastUploadResponse.objectUrl);
           }
         } catch (uploadErr: any) {
           console.warn('Property image upload failed:', uploadErr);
@@ -263,9 +286,9 @@ export default function AddPropertyScreen() {
       }
 
       if (isEditMode) {
-        router.replace('/(app)/(tabs)');
+        router.replace({ pathname: '/screens/property-details', params: { id: targetPropertyId } });
       } else {
-        router.replace('/(app)/(tabs)');
+        router.push({ pathname: '/screens/succesfully-added', params: { next: 'assign-manager' } });
       }
     } catch {
       // error surfaced by mutation
@@ -299,9 +322,14 @@ export default function AddPropertyScreen() {
         }
         backgroundColor={theme.colors.primary}
         textColor={theme.colors.white}
+        style={{ paddingVertical: theme.spacing.lg }}
       />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: theme.spacing.xl }}
+        >
           <View style={{ padding: theme.spacing.base, paddingTop: theme.spacing.lg }}>
             <Typography variant="title1" color={theme.colors.primary} style={{ marginBottom: theme.spacing.md }}>
               Basic Details
@@ -449,12 +477,13 @@ export default function AddPropertyScreen() {
                           placeholder="Enter price"
                           placeholderTextColor={theme.colors.placeholder}
                           style={{
-                            minWidth: 90,
+                            flex: 1,
                             fontFamily: theme.fontFamilies.primary,
                             fontSize: theme.fontSizes.base,
                             color: theme.colors.text,
                             marginHorizontal: theme.spacing.xs,
                             textAlign: 'right',
+                            minWidth: 60,
                           }}
                         />
                         <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: theme.spacing.sm }}>
@@ -477,10 +506,10 @@ export default function AddPropertyScreen() {
               )}
 
               {/* Advance Amount */}
-              <Typography variant="bodyMedium" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+              <Typography variant="bodyMedium" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.xs }}>
                 Advance Amount
               </Typography>
-              <Typography variant="caption" color={theme.colors.textMuted} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+              <Typography variant="caption" color={theme.colors.textMuted} style={{ marginBottom: theme.spacing.sm }}>
                 Security deposit collected from tenants
               </Typography>
               <Controller
@@ -568,36 +597,72 @@ export default function AddPropertyScreen() {
                 />
 
                 <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
-                  Upload Hostel Image
+                  Upload Hostel Images
                 </Typography>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={pickImage}
-                  style={{
-                    borderWidth: 1,
-                    borderStyle: 'dashed',
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.radius.md,
-                    padding: theme.spacing.lg,
-                    alignItems: 'center',
-                    backgroundColor: theme.colors.backgroundSecondary,
-                  }}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ alignItems: 'center', paddingVertical: theme.spacing.xs }}
                 >
-                  {image ? (
-                    <Image
-                      source={{ uri: image.uri }}
-                      style={{ width: '100%', height: 180, borderRadius: theme.radius.md }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <>
-                      <Ionicons name="cloud-upload-outline" size={32} color={theme.colors.primary} />
-                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm }}>
-                        Tap to upload image
+                  {images.map((img, index) => (
+                    <View
+                      key={`${img.uri}-${index}`}
+                      style={{
+                        width: 120,
+                        height: 120,
+                        marginRight: theme.spacing.sm,
+                        borderRadius: theme.radius.md,
+                        overflow: 'hidden',
+                        backgroundColor: theme.colors.backgroundSecondary,
+                      }}
+                    >
+                      <Image
+                        source={{ uri: img.uri }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => removeImage(index)}
+                        style={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Ionicons name="close" size={16} color={theme.colors.white} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  {images.length < 5 && (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={pickImage}
+                      style={{
+                        width: 120,
+                        height: 120,
+                        borderRadius: theme.radius.md,
+                        borderWidth: 1,
+                        borderStyle: 'dashed',
+                        borderColor: theme.colors.border,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: theme.colors.backgroundSecondary,
+                      }}
+                    >
+                      <Ionicons name="cloud-upload-outline" size={28} color={theme.colors.primary} />
+                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.xs }}>
+                        Add image
                       </Typography>
-                    </>
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                </ScrollView>
               </View>
 
               {error && (
@@ -607,12 +672,12 @@ export default function AddPropertyScreen() {
               )}
             </Card>
           </View>
+
+          <View style={{ padding: theme.spacing.base }}>
+            <Button title={isEditMode ? 'Save Changes' : 'Next'} loading={isPending} onPress={handleSubmit(onSubmit)} />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <View style={{ padding: theme.spacing.base }}>
-        <Button title={isEditMode ? 'Save Changes' : 'Next'} loading={isPending} onPress={handleSubmit(onSubmit)} />
-      </View>
     </ScreenWrapper>
   );
 }

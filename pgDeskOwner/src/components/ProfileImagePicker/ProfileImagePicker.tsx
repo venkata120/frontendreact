@@ -156,3 +156,7 @@ export const ProfileImagePicker = forwardRef<ProfileImagePickerRef, Props>(({
     </View>
   );
 });
+
+export default ProfileImagePicker;
+
+

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -94,7 +94,7 @@ export default function SignupOwnerScreen() {
   };
 
   return (
-    <ScreenWrapper avoidKeyboard backgroundColor="#8FA3B8">
+    <ScreenWrapper backgroundColor="#8FA3B8">
       <View style={{ flex: 1 }}>
         <View
           style={{
@@ -122,6 +122,10 @@ export default function SignupOwnerScreen() {
           </Typography>
         </View>
 
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
         <ScrollView
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
@@ -250,6 +254,7 @@ export default function SignupOwnerScreen() {
             <Button title="Next" loading={loading} onPress={handleSubmit(onSubmit)} />
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </ScreenWrapper>
   );

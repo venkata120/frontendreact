@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,6 +39,7 @@ const schema = z.object({
   rentPerMonth: z.string().min(1, messages.required('Rent Per Month')).regex(regex.digitsOnly, 'Rent must be a valid number'),
   advanceAmount: z.union([z.literal(''), z.string().regex(regex.digitsOnly, 'Advance Amount must be a valid number')]).optional(),
   joinDate: z.string().min(1, messages.required('Join Date')),
+  gender: z.enum(['M', 'F', 'O'], { message: 'Gender is required' }),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -145,16 +147,21 @@ const Picker: React.FC<PickerProps> = ({ label, value, placeholder, options, onS
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: theme.spacing.base,
+                        paddingHorizontal: theme.spacing.base,
+                        paddingVertical: theme.spacing.md,
+                        minHeight: 52,
                         borderBottomWidth: 1,
                         borderBottomColor: theme.colors.borderLight,
                         backgroundColor: isSelected ? theme.colors.primarySurface : theme.colors.white,
+                        borderRadius: theme.radius.md,
+                        marginHorizontal: theme.spacing.sm,
+                        marginVertical: theme.spacing.xs,
                       }}
                     >
                       <Typography variant="bodyMedium" color={isSelected ? theme.colors.primary : theme.colors.text}>
                         {item.label}
                       </Typography>
-                      {isSelected && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
+                      {isSelected && <Ionicons name="checkmark-circle" size={22} color={theme.colors.primary} />}
                     </TouchableOpacity>
                   );
                 }}
@@ -177,7 +184,7 @@ export default function AddTenantScreen() {
 
   const { control, handleSubmit, setValue, watch, trigger, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { joinDate: new Date().toISOString().slice(0, 10) },
+    defaultValues: { joinDate: new Date().toISOString().slice(0, 10), gender: undefined },
   });
 
   const [selectedRoomId, setSelectedRoomId] = useState('');
@@ -234,13 +241,14 @@ export default function AddTenantScreen() {
         bedId: selectedBedId,
         fullName: data.fullName,
         phone: normalizeMobile(data.phone),
-        email: data.email,
+        email: data.email || undefined,
         emergencyContact: data.emergencyContact ? normalizeMobile(data.emergencyContact) : undefined,
         joinDate: data.joinDate,
         exitDate: undefined,
         status: 'ACTIVE',
         rentPerMonth: Number(data.rentPerMonth),
         advanceAmount: data.advanceAmount ? Number(data.advanceAmount) : 0,
+        gender: data.gender,
       });
       await updateBedStatus.mutateAsync({ id: selectedBedId, status: 'OCCUPIED' });
       setSuccessOpen(true);
@@ -258,7 +266,12 @@ export default function AddTenantScreen() {
       />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.xl }} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ marginTop: theme.spacing.xl }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: theme.spacing.xl }}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing['2xl'] }}>
             <Card shadow="lg" padding={theme.spacing.lg}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
@@ -285,7 +298,7 @@ export default function AddTenantScreen() {
                 }}
               >
                 {photoUri ? (
-                  <Ionicons name="image" size={48} color={theme.colors.accentPurple} />
+                  <Image source={{ uri: photoUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                 ) : (
                   <>
                     <View
@@ -372,6 +385,28 @@ export default function AddTenantScreen() {
                   <Input label="Emergency Contact" placeholder="Enter emergency contact" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(sanitizeMobile(v))} error={errors.emergencyContact?.message} leftIcon="people-outline" />
                 )}
               />
+              <Controller
+                control={control}
+                name="gender"
+                render={({ field }) => (
+                  <Picker
+                    label="Gender *"
+                    value={field.value}
+                    placeholder="Select gender"
+                    options={[
+                      { label: 'Male', value: 'M' },
+                      { label: 'Female', value: 'F' },
+                      { label: 'Other', value: 'O' },
+                    ]}
+                    onSelect={field.onChange}
+                  />
+                )}
+              />
+              {errors.gender && (
+                <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                  {errors.gender.message}
+                </Typography>
+              )}
               <Controller
                 control={control}
                 name="rentPerMonth"
@@ -500,6 +535,7 @@ export default function AddTenantScreen() {
         onChange={(date) => setValue('joinDate', date.toISOString().slice(0, 10))}
         onClose={() => setDatePickerVisible(false)}
         title="Select Join Date"
+        minimumDate={new Date()}
       />
     </ScreenWrapper>
   );

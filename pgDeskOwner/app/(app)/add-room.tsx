@@ -62,17 +62,20 @@ export default function AddRoomScreen() {
       next.floor = 'Floor number is required';
     } else {
       const f = Number(floor);
-      if (Number.isNaN(f) || f < 0) next.floor = 'Enter a valid floor number';
+      if (Number.isNaN(f) || f <= 0) next.floor = 'Enter a valid floor number (must be greater than 0)';
       if (maxFloors !== undefined && maxFloors > 0 && f > maxFloors) {
-        next.floor = `Floor must be between 0 and ${maxFloors}`;
+        next.floor = `Floor must be between 1 and ${maxFloors}`;
       }
     }
     if (!selectedSharing) next.sharing = 'Select room sharing';
     if (selectedSharing === 'other' && (capacity <= 0 || capacity > MAX_CAPACITY)) {
       next.customCapacity = `Enter beds between 1 and ${MAX_CAPACITY}`;
     }
+    const baseRentNum = Number(baseRent.trim());
     if (baseRent.trim() && !/^\d+$/.test(baseRent.trim())) {
       next.baseRent = 'Base rent must be a valid number';
+    } else if (baseRent.trim() && baseRentNum > 100000) {
+      next.baseRent = 'Base rent seems too high (max ₹1,00,000)';
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -165,25 +168,21 @@ export default function AddRoomScreen() {
 
               {/* Floor number */}
               <Input
-                label="Floor number"
                 placeholder={`Enter floor number${maxFloors ? ` (0-${maxFloors})` : ''}`}
                 keyboardType="number-pad"
                 maxLength={2}
                 value={floor}
                 onChangeText={(v) => setFloor(v.replace(/[^0-9]/g, ''))}
                 error={errors.floor}
-                leftIcon={<Ionicons name="layers-outline" size={18} color={theme.colors.textMuted} />}
               />
 
               {/* Room number */}
               <Input
-                label="Room Number"
                 placeholder="Enter room number"
                 maxLength={ROOM_NUMBER_MAX_LENGTH}
                 value={roomNumber}
                 onChangeText={setRoomNumber}
                 error={errors.roomNumber}
-                leftIcon={<Ionicons name="create-outline" size={18} color={theme.colors.textMuted} />}
               />
 
               {/* Room Sharing */}
@@ -244,7 +243,6 @@ export default function AddRoomScreen() {
 
               {/* Base rent per bed */}
               <Input
-                label="Base Rent per Bed"
                 placeholder="Enter base rent per bed"
                 keyboardType="number-pad"
                 maxLength={8}

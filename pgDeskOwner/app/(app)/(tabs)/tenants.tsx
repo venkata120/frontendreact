@@ -247,7 +247,7 @@ export default function TenantsScreen() {
           onPress={() => router.push({ pathname: '/screens/add-tenant' as any, params: { pgId: selectedPg?.id } })}
           style={{
             position: 'absolute',
-            bottom: insets.bottom -20,
+            bottom: insets.bottom + 80,
             right: theme.spacing.base,
             flexDirection: 'row',
             alignItems: 'center',

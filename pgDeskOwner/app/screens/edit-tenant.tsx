@@ -64,6 +64,7 @@ export default function EditTenantScreen() {
           email: data.email,
           emergencyContact: data.emergencyContact ? normalizeMobile(data.emergencyContact) : undefined,
           rentPerMonth: Number(data.rentPerMonth),
+          joinDate: tenant?.joinDate,
         },
       });
       Alert.alert('Success', 'Tenant updated successfully', [{ text: 'OK', onPress: () => router.back() }]);

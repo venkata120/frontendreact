@@ -1,4 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card } from '../../src/components';
@@ -26,7 +27,19 @@ export default function PropertyDetailsScreen() {
     'profiles',
     { enabled: hasProperty }
   );
-  const propertyImageUrl = imageDownload?.presignedUrl;
+  const [propertyImageUrl, setPropertyImageUrl] = useState(
+    imageDownload?.presignedUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'
+  );
+
+  useEffect(() => {
+    setPropertyImageUrl(
+      imageDownload?.presignedUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'
+    );
+  }, [imageDownload?.presignedUrl]);
+
+  const handleImageError = () => {
+    setPropertyImageUrl('https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800');
+  };
 
   const handleDelete = () => {
     if (!property?.id) return;
@@ -129,11 +142,10 @@ export default function PropertyDetailsScreen() {
               <Typography variant="title1" style={{ marginBottom: theme.spacing.md, marginTop: theme.spacing.base }}>Property Image</Typography>
               <View style={{ position: 'relative', marginBottom: theme.spacing.lg }}>
                 <Image
-                  source={{
-                    uri: propertyImageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
-                  }}
+                  source={{ uri: propertyImageUrl }}
                   style={{ width: '100%', height: 180, borderRadius: theme.radius.lg }}
                   resizeMode="cover"
+                  onError={handleImageError}
                 />
                 <View
                   style={{

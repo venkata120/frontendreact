@@ -150,11 +150,18 @@ export default function HomeScreen() {
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name={item.icon as any} size={20} color={item.color} style={{ marginRight: 8 }} />
-                    <View style={{ flex: 1, flexShrink: 1 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
                       <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1} ellipsizeMode="tail">
                         {item.label}
                       </Typography>
-                      <Typography variant="title2" color={item.color} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit>
+                      <Typography
+                        variant="title2"
+                        color={item.color}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        adjustsFontSizeToFit
+                        style={{ flexShrink: 1 }}
+                      >
                         {item.value}
                       </Typography>
                     </View>
@@ -348,7 +355,7 @@ export default function HomeScreen() {
         style={{
           position: 'absolute',
           right: theme.spacing.base,
-          bottom: insets.bottom -20,
+          bottom: insets.bottom + 80,
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: theme.colors.primary,

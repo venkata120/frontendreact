@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { View, ScrollView, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, SearchBar } from '../../../src/components';
@@ -35,6 +36,7 @@ const NOTICE_TYPE_LABELS: Record<NoticeType, string> = {
 
 export default function NoticesScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { propertyId } = useTenant();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -160,7 +162,16 @@ export default function NoticesScreen() {
           paddingHorizontal: theme.spacing.base,
         }}
       >
-        <Typography variant="headline2" color={theme.colors.white}>Notice Board</Typography>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.navigate('/(app)/(tabs)')}
+            style={{ marginRight: theme.spacing.sm }}
+          >
+            <Ionicons name="arrow-back" size={24} color={theme.colors.white} />
+          </TouchableOpacity>
+          <Typography variant="headline2" color={theme.colors.white}>Notice Board</Typography>
+        </View>
       </View>
 
       <ScrollView

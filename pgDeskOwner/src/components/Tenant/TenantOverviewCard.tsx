@@ -33,11 +33,17 @@ export const TenantOverviewCard: React.FC<Props> = ({ label, value, icon, color,
         >
           <Ionicons name={icon} size={22} color={color} />
         </View>
-        <View style={{ marginLeft: theme.spacing.sm, flex: 1 }}>
-          <Typography variant="caption" color={theme.colors.textMuted}>
+        <View style={{ marginLeft: theme.spacing.sm, flex: 1, minWidth: 0 }}>
+          <Typography variant="caption" color={theme.colors.textMuted} numberOfLines={1} ellipsizeMode="tail">
             {label}
           </Typography>
-          <Typography variant="title2" color={color}>
+          <Typography
+            variant="title2"
+            color={color}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={{ flexShrink: 1 }}
+          >
             {value}
           </Typography>
         </View>

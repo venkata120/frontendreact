@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, TouchableOpacity, Modal, FlatList, TouchableWithoutFeedback } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,6 +16,7 @@ interface PgSelectorProps {
 
 export function PgSelector({ showCount = true }: PgSelectorProps) {
   const theme = useTheme();
+  const router = useRouter();
   const { user } = useAuth();
   const { selectedPg, setSelectedPg } = useSelectedPg();
   const [modalVisible, setModalVisible] = useState(false);
@@ -171,6 +173,32 @@ export function PgSelector({ showCount = true }: PgSelectorProps) {
                 );
               }}
             />
+            {!isManager && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => {
+                  setModalVisible(false);
+                  router.push('/screens/add-property');
+                }}
+                style={{
+                  marginTop: theme.spacing.md,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: theme.spacing.md,
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: theme.colors.primary,
+                  borderRadius: theme.radius.md,
+                  backgroundColor: theme.colors.primarySurface,
+                }}
+              >
+                <Ionicons name="add-circle" size={20} color={theme.colors.primary} />
+                <Typography variant="bodyMedium" color={theme.colors.primary} style={{ marginLeft: theme.spacing.sm, fontWeight: '600' }}>
+                  Add a new Property
+                </Typography>
+              </TouchableOpacity>
+            )}
               </View>
             </TouchableWithoutFeedback>
           </View>

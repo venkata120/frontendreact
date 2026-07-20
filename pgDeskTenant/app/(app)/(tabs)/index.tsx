@@ -49,7 +49,11 @@ export default function TenantHomeScreen() {
           />
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.22)' }} />
           <View style={{ position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigateOnce('/(app)/(tabs)/profile')}
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+            >
               <Avatar size={46} uri={user?.avatar} name={user?.name || tenantDetails?.fullName || 'Tenant'} />
               <View style={{ marginLeft: theme.spacing.sm }}>
                 <Typography variant="bodyMedium" color={theme.colors.white} style={{ fontWeight: '600' }}>
@@ -57,7 +61,7 @@ export default function TenantHomeScreen() {
                 </Typography>
                 <Typography variant="caption" color={theme.colors.white}>Student</Typography>
               </View>
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigateOnce('/screens/notifications')}

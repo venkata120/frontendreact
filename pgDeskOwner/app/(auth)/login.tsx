@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { View, Image, TouchableOpacity, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+import { View, Image, TouchableOpacity, KeyboardAvoidingView, Platform, useWindowDimensions, ScrollView } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -50,13 +50,16 @@ export default function LoginScreen() {
   }, [isAuthenticated, userRole, router]);
 
   return (
-    <ScreenWrapper avoidKeyboard>
+    <ScreenWrapper>
       <Header onBack={() => router.back()} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <View style={{ flex: 1, paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg, paddingBottom: theme.spacing.xl }}
+        >
           <View style={{ alignItems: 'center', marginBottom: theme.spacing.lg }}>
             <Image
               source={require('../../assets/images/owner-login-illustration.png')}
@@ -117,7 +120,7 @@ export default function LoginScreen() {
               </Typography>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ScreenWrapper>
   );

@@ -5,10 +5,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 
+const STATUS_OPTIONS = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Pending', value: 'PENDING' },
+  { label: 'Approved', value: 'APPROVED' },
+  { label: 'Rejected', value: 'REJECTED' },
+];
+
 export default function AccessRequestsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -50,6 +58,36 @@ export default function AccessRequestsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.md }}
+        >
+          {STATUS_OPTIONS.map((option) => {
+            const selected = statusFilter === option.value;
+            return (
+              <TouchableOpacity
+                key={option.value}
+                activeOpacity={0.8}
+                onPress={() => setStatusFilter(option.value)}
+                style={{
+                  paddingHorizontal: theme.spacing.md,
+                  paddingVertical: theme.spacing.sm,
+                  borderRadius: theme.radius.full,
+                  backgroundColor: selected ? theme.colors.primary : theme.colors.backgroundSecondary,
+                  borderWidth: 1,
+                  borderColor: selected ? theme.colors.primary : theme.colors.border,
+                  marginRight: theme.spacing.sm,
+                }}
+              >
+                <Typography variant="bodyMedium" color={selected ? theme.colors.white : theme.colors.text}>
+                  {option.label}
+                </Typography>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
         <View style={{ padding: theme.spacing.base, alignItems: 'center', paddingVertical: theme.spacing['3xl'] }}>
           <View style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: theme.colors.primarySurface, alignItems: 'center', justifyContent: 'center', marginBottom: theme.spacing.lg }}>
             <Ionicons name="notifications-off-outline" size={48} color={theme.colors.textMuted} />

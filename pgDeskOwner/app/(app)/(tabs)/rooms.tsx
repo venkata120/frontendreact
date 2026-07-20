@@ -144,7 +144,7 @@ export default function RoomsScreen() {
                           </Typography>
                         </View>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                      <Ionicons name="chevron-down" size={18} color={theme.colors.textMuted} />
                     </View>
                   </TouchableOpacity>
                 </Card>
@@ -321,7 +321,7 @@ export default function RoomsScreen() {
         style={{
           position: 'absolute',
           right: theme.spacing.base,
-          bottom: insets.bottom ,
+          bottom: insets.bottom + 80,
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: theme.colors.primary,

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'expo-router';
-import { View, TouchableOpacity, Alert } from 'react-native';
+import { View, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -65,6 +65,7 @@ function parseDate(dateStr: string) {
 export default function SignupScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const scrollRef = useRef<ScrollView>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const {
@@ -120,6 +121,7 @@ export default function SignupScreen() {
 
   return (
     <ScreenWrapper
+      scrollRef={scrollRef}
       avoidKeyboard
       scrollable
       scrollProps={{
@@ -206,6 +208,7 @@ export default function SignupScreen() {
               value={value}
               onChangeText={(text) => onChange(sanitizeMobile(text))}
               onBlur={onBlur}
+              onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
               error={errors.parentMobile?.message}
               leftIcon={<Ionicons name="call-outline" size={20} color={theme.colors.textMuted} />}
             />
@@ -217,7 +220,7 @@ export default function SignupScreen() {
           name="dob"
           render={({ field: { value } }) => (
             <View>
-              <TouchableOpacity activeOpacity={0.9} onPress={() => setShowDatePicker(true)}>
+              <TouchableOpacity activeOpacity={0.9} onPress={() => { setShowDatePicker(true); scrollRef.current?.scrollToEnd({ animated: true }); }}>
                 <View pointerEvents="none">
                   <Input
                     label="Date of Birth *"
@@ -253,6 +256,7 @@ export default function SignupScreen() {
               value={value}
               onChangeText={(text) => onChange(sanitizeAadhaar(text))}
               onBlur={onBlur}
+              onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
               error={errors.aadhaar?.message}
               leftIcon={<Ionicons name="card-outline" size={20} color={theme.colors.textMuted} />}
             />

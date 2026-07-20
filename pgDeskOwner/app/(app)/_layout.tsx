@@ -12,6 +12,7 @@ export default function AppLayout() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(manager-tabs)" />
+      <Stack.Screen name="profile" />
       <Stack.Screen name="all-screens" />
       <Stack.Screen name="screens/home-screen" />
       <Stack.Screen name="screens/tenant-screen" />

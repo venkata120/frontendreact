@@ -7,6 +7,7 @@ import {
   Alert,
   Image,
   ActionSheetIOS,
+  ScrollView,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,6 +39,7 @@ export default function EditProfileScreen() {
   const updateTenant = useUpdateTenant();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
   const initialValuesRef = useRef<FormData | null>(null);
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
@@ -172,6 +174,7 @@ export default function EditProfileScreen() {
 
   return (
     <ScreenWrapper
+      scrollRef={scrollRef}
       scrollable
       avoidKeyboard
       scrollProps={{ contentContainerStyle: { flexGrow: 1, paddingBottom: theme.spacing['3xl'] } }}
@@ -204,7 +207,7 @@ export default function EditProfileScreen() {
         </View>
       </View>
 
-      <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.base, flex: 1 }}>
+      <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.base, paddingBottom: theme.spacing.base, flex: 1 }}>
         <Card shadow="lg" padding={theme.spacing.lg}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
             <Ionicons name="person" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
@@ -270,21 +273,21 @@ export default function EditProfileScreen() {
                 <Input label="Parent Name *" placeholder="Enter parent name" maxLength={50} value={field.value} onChangeText={field.onChange} error={errors.parentName?.message} leftIcon="people-outline" />
               )} />
               <Controller control={control} name="parentPhone" render={({ field }) => (
-                <Input label="Parent Mobile Number *" placeholder="Enter parent mobile" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))} error={errors.parentPhone?.message} leftIcon="call-outline" />
+                <Input label="Parent Mobile Number *" placeholder="Enter parent mobile" keyboardType="phone-pad" maxLength={10} value={field.value} onChangeText={(v) => field.onChange(v.replace(/[^0-9]/g, ''))} error={errors.parentPhone?.message} leftIcon="call-outline" onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })} />
               )} />
             </>
           )}
-        </Card>
-      </View>
 
-      <View style={{ padding: theme.spacing.base, borderTopWidth: 1, borderTopColor: theme.colors.borderLight, backgroundColor: theme.colors.background, marginTop: 'auto' }}>
-        <Button
-          title="Save Changes"
-          loading={updateTenant.isPending}
-          disabled={updateTenant.isPending || isLoading || uploadingPhoto}
-          leftIcon={<Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />}
-          onPress={handleSubmit(onSubmit)}
-        />
+          <View style={{ paddingTop: theme.spacing.md }}>
+            <Button
+              title="Save Changes"
+              loading={updateTenant.isPending}
+              disabled={updateTenant.isPending || isLoading || uploadingPhoto}
+              leftIcon={<Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />}
+              onPress={handleSubmit(onSubmit)}
+            />
+          </View>
+        </Card>
       </View>
     </ScreenWrapper>
   );

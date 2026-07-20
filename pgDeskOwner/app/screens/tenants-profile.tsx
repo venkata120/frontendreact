@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ScreenWrapper,
@@ -15,7 +15,6 @@ import {
 import { useTheme } from '../../src/hooks/useTheme';
 import { useTenant, useDeleteTenant, useUpdateBedStatus } from '../../src/hooks/queries';
 import { getApiErrorMessage } from '../../src/utils/validation';
-import { callPhone } from '../../src/utils/uiHelpers';
 import { useState, useMemo } from 'react';
 
 export default function TenantsProfileScreen() {
@@ -33,8 +32,24 @@ export default function TenantsProfileScreen() {
     [tenant?.rentLedgers]
   );
 
+  const handleViewPayments = () => {
+    router.push({ pathname: '/screens/all-payments', params: { tenantId: id } } as any);
+  };
+
   const handleCall = (phone?: string) => {
-    callPhone(phone);
+    if (!phone) {
+      Alert.alert('No phone number', 'Phone number is not available.');
+      return;
+    }
+    const cleaned = phone.replace(/\D/g, '');
+    if (!cleaned) {
+      Alert.alert('No phone number', 'Phone number is not available.');
+      return;
+    }
+    Alert.alert('Call Tenant', `Do you want to call ${tenant?.fullName || 'this tenant'}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Call', onPress: () => Linking.openURL(`tel:${cleaned}`).catch(() => Alert.alert('Unable to call', 'No calling app is available on this device.')) },
+    ]);
   };
 
   const handleDelete = async () => {
@@ -80,8 +95,10 @@ export default function TenantsProfileScreen() {
         onBack={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
         rightAction={
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            {!isExited && receivedPayments > 0 && (
-              <View
+            {!isExited && tenant && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleViewPayments}
                 style={{
                   backgroundColor: theme.colors.success,
                   borderRadius: theme.radius.full,
@@ -93,7 +110,7 @@ export default function TenantsProfileScreen() {
                 <Typography variant="captionMedium" color={theme.colors.white}>
                   Received payments {receivedPayments}
                 </Typography>
-              </View>
+              </TouchableOpacity>
             )}
             {isExited ? (
               <TouchableOpacity
@@ -210,6 +227,16 @@ export default function TenantsProfileScreen() {
                 </View>
               ))}
             </Card>
+          )}
+
+          {tenant && tenant.rentLedgers && tenant.rentLedgers.length > 0 && !isExited && (
+            <Button
+              title="View All Payments"
+              variant="outline"
+              leftIcon={<Ionicons name="cash-outline" size={20} color={theme.colors.primary} />}
+              onPress={handleViewPayments}
+              style={{ marginBottom: theme.spacing.lg }}
+            />
           )}
 
           {isExited && (

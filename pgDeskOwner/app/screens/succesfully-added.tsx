@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Button } from '../../src/components';
@@ -7,6 +7,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 export default function SuccessfullyAddedScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { next } = useLocalSearchParams<{ next?: string }>();
 
   return (
     <ScreenWrapper>
@@ -26,9 +27,13 @@ export default function SuccessfullyAddedScreen() {
         </View>
         <Typography variant="headline2" align="center">Successfully Added !</Typography>
         <Typography variant="body" align="center" color={theme.colors.textMuted} style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing['3xl'] }}>
-          Your details have been saved successfully.
+          Your property has been saved successfully.
         </Typography>
-        <Button title="Done" onPress={() => router.replace('/(app)/(tabs)')} />
+        {next === 'assign-manager' ? (
+          <Button title="Assign Manager" onPress={() => router.replace('/screens/assign-manager')} />
+        ) : (
+          <Button title="Done" onPress={() => router.replace('/(app)/(tabs)')} />
+        )}
       </View>
     </ScreenWrapper>
   );

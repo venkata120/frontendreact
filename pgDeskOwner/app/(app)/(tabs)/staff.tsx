@@ -127,7 +127,13 @@ export default function StaffScreen() {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                       <Ionicons name="person-outline" size={12} color={theme.colors.textMuted} />
-                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: 4 }}>Manager</Typography>
+                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: 4 }}>{member.role ? member.role.charAt(0).toUpperCase() + member.role.slice(1) : 'Manager'}</Typography>
+                      {member.shift && (
+                        <>
+                          <Typography variant="caption" color={theme.colors.textMuted} style={{ marginHorizontal: 4 }}>•</Typography>
+                          <Typography variant="caption" color={theme.colors.textMuted}>{member.shift}</Typography>
+                        </>
+                      )}
                     </View>
                     <Typography variant="bodyMedium" color={theme.colors.accentPurple} style={{ marginTop: theme.spacing.xs }}>
                       {member.email}

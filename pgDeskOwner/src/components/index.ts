@@ -14,6 +14,7 @@ export { AppProviders } from './providers/AppProviders';
 export { StepIndicator } from './StepIndicator/StepIndicator';
 export { PgSelector } from './PgSelector/PgSelector';
 export { DaySelector, getRepeatLabel } from './DaySelector/DaySelector';
-export { ProfileImagePicker } from './ProfileImagePicker/ProfileImagePicker';
+export { DatePicker } from './DatePicker/DatePicker';
+export { default as ProfileImagePicker } from './ProfileImagePicker/ProfileImagePicker';
 export type { ProfileImagePickerRef } from './ProfileImagePicker/ProfileImagePicker';
 export * from './Tenant';

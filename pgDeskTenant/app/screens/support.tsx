@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { View, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, Avatar } from '../../src/components';
+import { ScreenWrapper, Header, Typography, Card, Avatar } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuth } from '../../src/hooks/useAuth';
 
@@ -19,6 +19,7 @@ export default function SupportScreen() {
 
   return (
     <ScreenWrapper>
+      <Header title="Support" onBack={() => router.back()} />
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header image with overlay */}
         <View style={{ position: 'relative' }}>

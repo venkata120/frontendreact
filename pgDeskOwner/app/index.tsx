@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
@@ -40,6 +41,8 @@ export default function SplashScreen() {
   const { selectRole } = useAuth();
   const { isAuthenticated, loading, userRole } = useSelector((state: RootState) => state.auth);
   const { width, height } = useWindowDimensions();
+  const imageSize = Math.min(width * 0.32, 140);
+  const logoSize = Math.min(width * 0.45, 160);
 
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
@@ -158,7 +161,7 @@ export default function SplashScreen() {
         <Animated.View style={logoAnimatedStyle}>
           <Image
             source={require('../assets/images/Logo.png')}
-            style={styles.logo}
+            style={{ width: logoSize, height: logoSize }}
             resizeMode="contain"
           />
         </Animated.View>
@@ -185,7 +188,7 @@ export default function SplashScreen() {
                   onPress={() => handleSelectRole(role.key)}
                   style={styles.roleButton}
                 >
-                  <Image source={role.image} style={styles.roleImage} resizeMode="contain" />
+                  <Image source={role.image} style={{ width: imageSize, height: imageSize }} resizeMode="contain" />
                   <Typography variant="bodyMedium" color="#FFFFFF" style={styles.roleLabel}>
                     {role.label}
                   </Typography>
@@ -200,24 +203,24 @@ export default function SplashScreen() {
           pointerEvents={selectedRole ? 'auto' : 'none'}
         >
           <Button
-            title="Sign up"
+            title="Sign up as Owner"
             onPress={handleSignUp}
             fullWidth
             style={styles.signupButton}
             textColor="#FFFFFF"
           />
-
-          <View style={styles.loginRow}>
-            <Typography variant="bodyMedium" color="rgba(255, 255, 255, 0.8)">
-              Already have an account ?{' '}
-            </Typography>
-            <TouchableOpacity onPress={handleLogin} activeOpacity={0.7}>
-              <Typography variant="bodyMedium" color="#FFFFFF" style={styles.loginText}>
-                LOGIN
-              </Typography>
-            </TouchableOpacity>
-          </View>
         </Animated.View>
+
+        <View style={styles.loginRow}>
+          <Typography variant="bodyMedium" color="rgba(255, 255, 255, 0.8)">
+            Already have an account ?{' '}
+          </Typography>
+          <TouchableOpacity onPress={handleLogin} activeOpacity={0.7}>
+            <Typography variant="bodyMedium" color="#FFFFFF" style={styles.loginText}>
+              LOGIN
+            </Typography>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -244,11 +247,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingTop: '28%',
-  },
-  logo: {
-    width: 180,
-    height: 180,
+    paddingTop: '24%',
   },
   rolesWrapper: {
     position: 'absolute',
@@ -282,10 +281,6 @@ const styles = StyleSheet.create({
   },
   roleButton: {
     alignItems: 'center',
-  },
-  roleImage: {
-    width: 150,
-    height: 150,
   },
   roleLabel: {
     marginTop: 8,

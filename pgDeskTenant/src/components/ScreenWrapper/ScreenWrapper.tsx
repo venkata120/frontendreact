@@ -7,6 +7,7 @@ interface Props extends ViewProps {
   children: React.ReactNode;
   scrollable?: boolean;
   scrollProps?: ScrollViewProps;
+  scrollRef?: React.RefObject<ScrollView | null>;
   avoidKeyboard?: boolean;
   backgroundColor?: string;
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
@@ -16,6 +17,7 @@ export const ScreenWrapper: React.FC<Props> = ({
   children,
   scrollable = false,
   scrollProps,
+  scrollRef,
   avoidKeyboard = false,
   backgroundColor,
   style,
@@ -39,6 +41,7 @@ export const ScreenWrapper: React.FC<Props> = ({
 
   const content = scrollable ? (
     <ScrollView
+      ref={scrollRef}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ flexGrow: 1 }}
       keyboardShouldPersistTaps="handled"
@@ -61,7 +64,7 @@ export const ScreenWrapper: React.FC<Props> = ({
     return (
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
       >
         {wrapper}
       </KeyboardAvoidingView>

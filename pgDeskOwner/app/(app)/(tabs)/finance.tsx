@@ -136,20 +136,28 @@ export default function FinanceScreen() {
   }, [rentIncome, pendingPayments, totalExpected]);
 
   const expenseGroups = useMemo(() => {
+    const selectedMonthNum = Number(selectedMonth);
+    const selectedYearNum = Number(selectedYear);
     const map = new Map<string, { category: string; items: { name: string; amount: number }[] }>();
-    (expenses || []).forEach((e) => {
-      const master = masterById.get(e.expenseMasterId || '');
-      const category = master?.categoryName || e.customSubcategoryName || 'Other';
-      const name = master?.subcategoryName || e.customSubcategoryName || category;
-      const existing = map.get(category) || { category, items: [] };
-      existing.items.push({ name, amount: e.amount || 0 });
-      map.set(category, existing);
-    });
+    (expenses || [])
+      .filter((e) => {
+        const matchesMonth = e.expenseMonth === selectedMonth;
+        const matchesYear = e.expenseYear === selectedYearNum;
+        return matchesMonth && matchesYear;
+      })
+      .forEach((e) => {
+        const master = masterById.get(e.expenseMasterId || '');
+        const category = master?.categoryName || e.customSubcategoryName || 'Other';
+        const name = master?.subcategoryName || e.customSubcategoryName || category;
+        const existing = map.get(category) || { category, items: [] };
+        existing.items.push({ name, amount: e.amount || 0 });
+        map.set(category, existing);
+      });
     return Array.from(map.values()).map((g) => ({
       ...g,
       total: g.items.reduce((sum, i) => sum + i.amount, 0),
     })).sort((a, b) => b.total - a.total);
-  }, [expenses, masterById]);
+  }, [expenses, masterById, selectedMonth, selectedYear]);
 
   const isLoading = overviewLoading || rentLedgersLoading || expensesLoading;
 
@@ -258,6 +266,44 @@ export default function FinanceScreen() {
           <View style={{ paddingHorizontal: theme.spacing.base, paddingBottom: theme.spacing.xl }}>
             {activeTab === 'income' ? (
               <>
+                <Card shadow="md" padding={theme.spacing.lg} style={{ marginBottom: theme.spacing.md, backgroundColor: theme.colors.success }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View>
+                      <Typography variant="bodyMedium" color="rgba(255,255,255,0.9)">
+                        Total Income
+                      </Typography>
+                      <Typography variant="headline1" color={theme.colors.white} style={{ marginTop: theme.spacing.xs }}>
+                        ₹{totalIncome.toLocaleString()}
+                      </Typography>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Typography variant="bodyMedium" color="rgba(255,255,255,0.9)">
+                        Expected
+                      </Typography>
+                      <Typography variant="title1" color={theme.colors.white} style={{ marginTop: theme.spacing.xs }}>
+                        ₹{totalExpected.toLocaleString()}
+                      </Typography>
+                    </View>
+                  </View>
+                  <View
+                    style={{
+                      height: 8,
+                      backgroundColor: 'rgba(255,255,255,0.3)',
+                      borderRadius: 4,
+                      marginTop: theme.spacing.md,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: `${totalExpected > 0 ? Math.round((totalIncome / totalExpected) * 100) : 0}%`,
+                        height: '100%',
+                        backgroundColor: theme.colors.white,
+                      }}
+                    />
+                  </View>
+                </Card>
+
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
                   <Typography variant="title1">Income by category</Typography>
                 </View>
@@ -323,6 +369,27 @@ export default function FinanceScreen() {
               </>
             ) : (
               <>
+                <Card shadow="md" padding={theme.spacing.lg} style={{ marginBottom: theme.spacing.md, backgroundColor: theme.colors.danger }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View>
+                      <Typography variant="bodyMedium" color="rgba(255,255,255,0.9)">
+                        Total Expenses
+                      </Typography>
+                      <Typography variant="headline1" color={theme.colors.white} style={{ marginTop: theme.spacing.xs }}>
+                        ₹{expenseGroups.reduce((sum, g) => sum + g.total, 0).toLocaleString()}
+                      </Typography>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Typography variant="bodyMedium" color="rgba(255,255,255,0.9)">
+                        Categories
+                      </Typography>
+                      <Typography variant="title1" color={theme.colors.white} style={{ marginTop: theme.spacing.xs }}>
+                        {expenseGroups.length}
+                      </Typography>
+                    </View>
+                  </View>
+                </Card>
+
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
                   <Typography variant="title1">Expences by category</Typography>
                 </View>

@@ -1,4 +1,5 @@
 import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Header, Typography, Card } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
@@ -8,12 +9,13 @@ import { formatDate } from '../../src/utils/formatters';
 
 export default function TenantNotificationsScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { propertyId } = useTenant();
   const { data: announcements, isLoading } = useAnnouncementsByPg(propertyId ?? undefined);
 
   return (
     <ScreenWrapper>
-      <Header title="Notifications" />
+      <Header title="Notifications" onBack={() => router.back()} />
       <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
         <View style={{ paddingHorizontal: theme.spacing.base }}>
           {isLoading ? (

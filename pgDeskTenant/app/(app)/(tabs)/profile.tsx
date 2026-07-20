@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useRef, useCallback } from 'react';
-import { View, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ActivityIndicator, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Card, Avatar, Button } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
@@ -154,7 +154,17 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           ))}
 
-          <Button title="Logout" variant="danger" onPress={signOut} style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.xl }} />
+          <Button
+            title="Logout"
+            variant="danger"
+            onPress={() =>
+              Alert.alert('Logout', 'Are you sure you want to log out?', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Yes', style: 'destructive', onPress: signOut },
+              ])
+            }
+            style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.xl }}
+          />
         </View>
       </ScrollView>
     </ScreenWrapper>

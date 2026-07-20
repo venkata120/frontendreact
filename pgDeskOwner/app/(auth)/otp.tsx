@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { View, TouchableOpacity, Image, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+import { View, TouchableOpacity, Image, KeyboardAvoidingView, Platform, useWindowDimensions, ScrollView } from 'react-native';
 import { useSelector } from 'react-redux';
 import { ScreenWrapper, Typography, Button, Header, OTPInput } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
@@ -60,13 +60,16 @@ export default function OTPScreen() {
   }, [reqId, resetError, resendOtp]);
 
   return (
-    <ScreenWrapper avoidKeyboard>
+    <ScreenWrapper>
       <Header onBack={() => router.back()} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <View style={{ flex: 1, paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.lg, paddingBottom: theme.spacing.xl }}
+        >
           <Image
             source={require('../../assets/images/otp-illustration.png')}
             style={{
@@ -119,7 +122,7 @@ export default function OTPScreen() {
               </TouchableOpacity>
             )}
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ScreenWrapper>
   );
