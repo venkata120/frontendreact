@@ -20,6 +20,8 @@ import Svg, { Path } from 'react-native-svg';
 import { RootState } from '../src/redux/store';
 import { useAuth } from '../src/hooks/useAuth';
 
+console.log('DEBUG: app/index.tsx loaded');
+
 const BACKGROUND = '#FFFFFF';
 const WAVE_COLOR = '#0A2A5E';
 

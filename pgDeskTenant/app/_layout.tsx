@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useSelector } from 'react-redux';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+
+console.log('DEBUG: app/_layout.tsx loaded');
 import {
   Inter_400Regular,
   Inter_500Medium,
