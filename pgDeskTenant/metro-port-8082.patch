@@ -1,0 +1,13 @@
+diff --git a/pgDeskTenant/metro.config.js b/pgDeskTenant/metro.config.js
+index d73d5bd..0fed0b4 100644
+--- a/pgDeskTenant/metro.config.js
++++ b/pgDeskTenant/metro.config.js
+@@ -5,4 +5,7 @@ const { getDefaultConfig } = require('expo/metro-config');
+ process.env.EXPO_ROUTER_APP_ROOT = '../../app';
+ console.log('DEBUG metro.config.js: EXPO_ROUTER_APP_ROOT set to', process.env.EXPO_ROUTER_APP_ROOT);
+ 
+-module.exports = getDefaultConfig(__dirname);
++const config = getDefaultConfig(__dirname);
++config.server = { port: 8082 };
++
++module.exports = config;
