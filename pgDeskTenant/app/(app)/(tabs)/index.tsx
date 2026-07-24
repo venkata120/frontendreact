@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
-import { useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { View, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenWrapper, Typography, Card, Avatar } from '../../../src/components';
+import { ScreenWrapper, Typography, Card, Avatar, TenantDrawer } from '../../../src/components';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useTenant } from '../../../src/context/TenantContext';
@@ -35,7 +35,7 @@ export default function TenantHomeScreen() {
   const { data: tenantDetails, isLoading: isTenantLoading } = useTenantDetails(tenantId ?? undefined);
   const { data: announcements } = useAnnouncementsByPg(propertyId ?? undefined);
 
-  const latestAnnouncement = announcements?.[0];
+  const [drawerVisible, setDrawerVisible] = useState(false);
 
   return (
     <ScreenWrapper>
@@ -51,7 +51,7 @@ export default function TenantHomeScreen() {
           <View style={{ position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => navigateOnce('/(app)/(tabs)/profile')}
+              onPress={() => setDrawerVisible(true)}
               style={{ flexDirection: 'row', alignItems: 'center' }}
             >
               <Avatar size={46} uri={user?.avatar} name={user?.name || tenantDetails?.fullName || 'Tenant'} />
@@ -171,6 +171,7 @@ export default function TenantHomeScreen() {
           </Card>
         </View>
       </ScrollView>
+      <TenantDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
     </ScreenWrapper>
   );
 }

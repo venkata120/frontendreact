@@ -9,5 +9,6 @@ export { OTPInput } from './OTPInput/OTPInput';
 export { ScreenWrapper } from './ScreenWrapper/ScreenWrapper';
 export { Typography } from './Typography/Typography';
 export { DatePicker } from './DatePicker/DatePicker';
+export { SideDrawer, TenantDrawer } from './SideDrawer';
 export { ThemeProvider } from './providers/ThemeProvider';
 export { AppProviders } from './providers/AppProviders';

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper, Typography, Button, Card, Avatar } from '../../src/components';
 import { useTheme } from '../../src/hooks/useTheme';
-import { useTenant, useRoomsWithBeds, useUpdateTenant, useUpdateBedStatus } from '../../src/hooks/queries';
+import { useTenant, useRoomsWithBeds, useUpdateTenant } from '../../src/hooks/queries';
 import type { Bed } from '../../src/types';
 
 export default function AllocateRoomScreen() {
@@ -14,14 +14,12 @@ export default function AllocateRoomScreen() {
   const { data: tenant } = useTenant(tenantId);
   const { data: roomsWithBeds } = useRoomsWithBeds(tenant?.pgId);
   const updateTenant = useUpdateTenant();
-  const updateBed = useUpdateBedStatus();
   const [selectedBed, setSelectedBed] = useState<Bed | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
 
   const onAllocate = async () => {
     if (!tenant || !selectedBed) return;
     await updateTenant.mutateAsync({ id: tenant.id, payload: { bedId: selectedBed.id } });
-    await updateBed.mutateAsync({ id: selectedBed.id, status: 'OCCUPIED' });
     router.back();
   };
 
@@ -120,7 +118,7 @@ export default function AllocateRoomScreen() {
       <View style={{ padding: theme.spacing.base }}>
         <Button
           title="Allocate Room"
-          loading={updateTenant.isPending || updateBed.isPending}
+          loading={updateTenant.isPending}
           disabled={!selectedBed}
           leftIcon={<Ionicons name="bed" size={18} color={theme.colors.white} />}
           onPress={onAllocate}

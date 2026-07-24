@@ -27,7 +27,7 @@ import {
 } from '../../src/components';
 import { DatePicker } from '../../src/components/DatePicker/DatePicker';
 import { useTheme } from '../../src/hooks/useTheme';
-import { useCreateTenant, useUpdateBedStatus } from '../../src/hooks/queries';
+import { useCreateTenant } from '../../src/hooks/queries';
 import { useRoomsWithBeds } from '../../src/hooks/queries/useRoomsWithBeds';
 import { regex, messages, normalizeMobile, sanitizeMobile, getApiErrorMessage } from '../../src/utils/validation';
 
@@ -179,7 +179,6 @@ export default function AddTenantScreen() {
   const router = useRouter();
   const { pgId } = useLocalSearchParams<{ pgId: string }>();
   const createTenant = useCreateTenant();
-  const updateBedStatus = useUpdateBedStatus();
   const { data: rooms, isLoading: roomsLoading } = useRoomsWithBeds(pgId);
 
   const { control, handleSubmit, setValue, watch, trigger, formState: { errors } } = useForm<FormData>({
@@ -244,7 +243,6 @@ export default function AddTenantScreen() {
         advanceAmount: data.advanceAmount ? Number(data.advanceAmount) : 0,
         gender: data.gender,
       });
-      await updateBedStatus.mutateAsync({ id: selectedBedId, status: 'OCCUPIED' });
       setSuccessOpen(true);
     } catch (err: any) {
       setError(getApiErrorMessage(err, 'Failed to add tenant'));

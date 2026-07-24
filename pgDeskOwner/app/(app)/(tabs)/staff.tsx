@@ -9,14 +9,46 @@ import { ScreenWrapper, Typography, Card, SearchBar, HeroHeader, Avatar } from '
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useDrawer } from '../../../src/context/DrawerContext';
-import { useManagers, useDeleteManager } from '../../../src/hooks/queries';
+import { useSelectedPg } from '../../../src/context/SelectedPgContext';
+import { useStaffByProperty, useDeleteStaff } from '../../../src/hooks/queries';
 import { callPhone } from '../../../src/utils/uiHelpers';
+import type { Staff, StaffRole } from '../../../src/types';
 
-const DEPARTMENTS = ['All workers', 'Management', 'Kitchen'];
-const DEPT_ICONS: Record<string, any> = {
+type Department = 'All workers' | 'Management' | 'Kitchen' | 'Cleaning';
+
+const DEPARTMENTS: Department[] = ['All workers', 'Management', 'Kitchen', 'Cleaning'];
+const DEPT_ICONS: Record<Department, any> = {
   'All workers': 'people',
   'Management': 'briefcase',
   'Kitchen': 'restaurant',
+  'Cleaning': 'sparkles',
+};
+
+const ROLE_TO_DEPARTMENT: Record<StaffRole, Department> = {
+  MANAGER: 'Management',
+  SECURITY: 'Management',
+  COOK: 'Kitchen',
+  HOUSE_KEEPER: 'Cleaning',
+  MAID: 'Cleaning',
+  CLEANER: 'Cleaning',
+  OTHERS: 'All workers',
+};
+
+const SHIFT_LABEL: Record<StaffRole, string> = {
+  MANAGER: 'Manager',
+  SECURITY: 'Security',
+  COOK: 'Cook',
+  HOUSE_KEEPER: 'Housekeeping',
+  MAID: 'Maid',
+  CLEANER: 'Cleaner',
+  OTHERS: 'Other',
+};
+
+const SHIFT_DISPLAY: Record<string, string> = {
+  ALL_DAY: 'Full Day',
+  MORNING: 'Morning',
+  AFTER_NOON: 'Afternoon',
+  NIGHT: 'Night',
 };
 
 export default function StaffScreen() {
@@ -25,26 +57,27 @@ export default function StaffScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { openDrawer } = useDrawer();
+  const { selectedPg } = useSelectedPg();
   const qc = useQueryClient();
-  const [activeDept, setActiveDept] = useState('All workers');
+  const [activeDept, setActiveDept] = useState<Department>('All workers');
   const [search, setSearch] = useState('');
 
-  const { data: managers, isLoading, refetch: refetchManagers } = useManagers(user?.id);
-  const deleteManager = useDeleteManager();
+  const { data: staff, isLoading, refetch: refetchStaff } = useStaffByProperty(selectedPg?.id);
+  const deleteStaff = useDeleteStaff();
 
   useFocusEffect(
     useCallback(() => {
-      refetchManagers();
-      if (user?.id) {
-        qc.refetchQueries({ queryKey: ['managers', user.id] });
+      if (selectedPg?.id) {
+        refetchStaff();
       }
-    }, [refetchManagers, qc, user?.id])
+    }, [refetchStaff, selectedPg?.id])
   );
 
-  const filtered = managers?.filter((m) => {
+  const filtered = staff?.filter((member) => {
     const q = search.toLowerCase();
-    const matchesSearch = m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q);
-    const matchesDept = activeDept === 'All workers' || activeDept === 'Management';
+    const matchesSearch =
+      member.fullName.toLowerCase().includes(q) || member.mobileNumber.includes(q);
+    const matchesDept = activeDept === 'All workers' || ROLE_TO_DEPARTMENT[member.role] === activeDept;
     return matchesSearch && matchesDept;
   });
 
@@ -56,8 +89,22 @@ export default function StaffScreen() {
     callPhone(phone);
   };
 
+  const handleDelete = (member: Staff) => {
+    Alert.alert('Delete Staff', `Are you sure you want to remove ${member.fullName}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          if (!selectedPg?.id || !member.staffId) return;
+          deleteStaff.mutate({ propertyId: selectedPg.id, staffId: member.staffId });
+        },
+      },
+    ]);
+  };
+
   return (
-    <ScreenWrapper edges={["bottom", "left", "right"]}>
+    <ScreenWrapper edges={['bottom', 'left', 'right']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <HeroHeader
           avatarUri=""
@@ -70,7 +117,11 @@ export default function StaffScreen() {
 
         <SearchBar placeholder="Search Workers.." value={search} onChangeText={setSearch} />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: theme.spacing.base, paddingBottom: theme.spacing.md }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: theme.spacing.base, paddingBottom: theme.spacing.md }}
+        >
           {DEPARTMENTS.map((dept) => (
             <TouchableOpacity
               key={dept}
@@ -100,7 +151,14 @@ export default function StaffScreen() {
         </ScrollView>
 
         <View style={{ paddingHorizontal: theme.spacing.base }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: theme.spacing.md,
+            }}
+          >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="person" size={18} color={theme.colors.text} style={{ marginRight: 6 }} />
               <Typography variant="title1">{activeDept}</Typography>
@@ -110,46 +168,70 @@ export default function StaffScreen() {
 
           {isLoading && <Typography variant="body" color={theme.colors.textMuted}>Loading...</Typography>}
 
+          {!selectedPg?.id && (
+            <Typography variant="body" color={theme.colors.textMuted} style={{ marginBottom: theme.spacing.md }}>
+              Please select a property to view staff.
+            </Typography>
+          )}
+
           {filtered?.map((member) => (
-            <Card key={member.id} shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
+            <Card key={member.staffId} shadow="sm" padding={theme.spacing.md} style={{ marginBottom: theme.spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={() => router.push({ pathname: '/screens/manager-profile' as any, params: { managerId: member.id } })}
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
-                >
-                  <Avatar uri="" name={member.name} size={56} />
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                  <Avatar uri={member.profilePhotoUrl} name={member.fullName} size={56} />
                   <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
-                    <Typography variant="title3">{member.name}</Typography>
+                    <Typography variant="title3" numberOfLines={1} ellipsizeMode="tail">
+                      {member.fullName}
+                    </Typography>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                       <Ionicons name="call-outline" size={12} color={theme.colors.textMuted} />
-                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: 4 }}>{member.mobile || '-'}</Typography>
+                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: 4 }}>
+                        {member.mobileNumber || '-'}
+                      </Typography>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                       <Ionicons name="person-outline" size={12} color={theme.colors.textMuted} />
-                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: 4 }}>{member.role ? member.role.charAt(0).toUpperCase() + member.role.slice(1) : 'Manager'}</Typography>
-                      {member.shift && (
-                        <>
-                          <Typography variant="caption" color={theme.colors.textMuted} style={{ marginHorizontal: 4 }}>•</Typography>
-                          <Typography variant="caption" color={theme.colors.textMuted}>{member.shift}</Typography>
-                        </>
-                      )}
+                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: 4 }}>
+                        {SHIFT_LABEL[member.role]}
+                        {member.otherRole ? ` - ${member.otherRole}` : ''}
+                      </Typography>
+                      <Typography variant="caption" color={theme.colors.textMuted} style={{ marginHorizontal: 4 }}>
+                        •
+                      </Typography>
+                      <Typography variant="caption" color={theme.colors.textMuted}>
+                        {SHIFT_DISPLAY[member.shift] || member.shift}
+                      </Typography>
                     </View>
                     <Typography variant="bodyMedium" color={theme.colors.accentPurple} style={{ marginTop: theme.spacing.xs }}>
-                      {member.email}
+                      ₹{member.salary} / {member.paymentType.toLowerCase()}
                     </Typography>
                   </View>
-                </TouchableOpacity>
+                </View>
 
                 <View style={{ alignItems: 'flex-end', marginLeft: theme.spacing.sm }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: member.active ? theme.colors.success : theme.colors.textMuted, marginRight: 4 }} />
-                    <Typography variant="caption" color={member.active ? theme.colors.success : theme.colors.textMuted}>{member.active ? 'Active' : 'Inactive'}</Typography>
+                    <View
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: member.isActive ? theme.colors.success : theme.colors.textMuted,
+                        marginRight: 4,
+                      }}
+                    />
+                    <Typography variant="caption" color={member.isActive ? theme.colors.success : theme.colors.textMuted}>
+                      {member.isActive ? 'Active' : 'Inactive'}
+                    </Typography>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.sm }}>
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      onPress={() => router.push({ pathname: '/screens/edit-manager' as any, params: { id: member.id } })}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/(app)/staff-management',
+                          params: { staffId: member.staffId, edit: 'true' },
+                        } as any)
+                      }
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       style={{
                         width: 32,
@@ -165,20 +247,7 @@ export default function StaffScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      onPress={() => {
-                        Alert.alert(
-                          'Delete Staff',
-                          `Are you sure you want to remove ${member.name}?`,
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            {
-                              text: 'Delete',
-                              style: 'destructive',
-                              onPress: () => member.id && deleteManager.mutate(member.id),
-                            },
-                          ]
-                        );
-                      }}
+                      onPress={() => handleDelete(member)}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       style={{
                         width: 32,
@@ -194,7 +263,7 @@ export default function StaffScreen() {
                   </View>
                   <TouchableOpacity
                     activeOpacity={0.8}
-                    onPress={() => handleCall(member.mobile)}
+                    onPress={() => handleCall(member.mobileNumber)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     style={{
                       width: 32,
@@ -218,11 +287,11 @@ export default function StaffScreen() {
 
       <TouchableOpacity
         activeOpacity={0.9}
-        onPress={() => router.push('/screens/assign-manager')}
+        onPress={() => router.push('/(app)/staff-management' as any)}
         style={{
           position: 'absolute',
           right: theme.spacing.base,
-          bottom: insets.bottom,
+          bottom: insets.bottom + theme.spacing.base,
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: theme.colors.primary,

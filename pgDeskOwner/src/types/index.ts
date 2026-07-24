@@ -167,6 +167,47 @@ export interface ManagerPgAssignment {
 }
 
 // ------------------------------------------------------------------
+// Staff
+// ------------------------------------------------------------------
+
+export type StaffRole = 'MANAGER' | 'COOK' | 'HOUSE_KEEPER' | 'SECURITY' | 'MAID' | 'CLEANER' | 'OTHERS';
+export type StaffShift = 'ALL_DAY' | 'MORNING' | 'AFTER_NOON' | 'NIGHT';
+export type StaffPaymentType = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
+export interface Staff {
+  staffId: string;
+  propertyId: string;
+  fullName: string;
+  mobileNumber: string;
+  role: StaffRole;
+  otherRole?: string;
+  shift: StaffShift;
+  salary: number;
+  paymentType: StaffPaymentType;
+  isActive: boolean;
+  profilePhotoUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StaffRequest {
+  fullName: string;
+  mobileNumber: string;
+  role: StaffRole;
+  otherRole?: string;
+  shift: StaffShift;
+  salary: number;
+  paymentType: StaffPaymentType;
+  isActive: boolean;
+}
+
+export interface StaffImageFile {
+  uri: string;
+  name?: string;
+  type?: string;
+}
+
+// ------------------------------------------------------------------
 // Rooms & Beds
 // ------------------------------------------------------------------
 

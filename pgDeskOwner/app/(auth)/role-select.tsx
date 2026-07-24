@@ -124,6 +124,16 @@ export default function RoleSelectScreen() {
             variant="outline"
             onPress={handleRegister}
           />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: theme.spacing.md }}>
+            <Typography variant="body" color={theme.colors.textMuted}>
+              Already have an account?
+            </Typography>
+            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+              <Typography variant="bodyMedium" color={theme.colors.primary} style={{ marginLeft: 4, fontWeight: '600' }}>
+                Login
+              </Typography>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </ScreenWrapper>
