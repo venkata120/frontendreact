@@ -1,0 +1,248 @@
+import { useRouter } from 'expo-router';
+import { View, ScrollView, TouchableOpacity, Modal, FlatList, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenWrapper, Typography, Input, Button, Card } from '../../src/components';
+import { useTheme } from '../../src/hooks/useTheme';
+import { useSelectedPg } from '../../src/context/SelectedPgContext';
+import { useCreateExpense, useExpenseMasters } from '../../src/hooks/queries';
+import { useAuth } from '../../src/hooks/useAuth';
+import { useMemo, useState } from 'react';
+import { regex, messages, getApiErrorMessage } from '../../src/utils/validation';
+
+const schema = z.object({
+  amount: z.string().min(1, messages.required('Amount')).regex(regex.digitsOnly, 'Amount must be a valid number'),
+  expenseMonth: z
+    .string()
+    .min(1, messages.required('Month'))
+    .regex(/^\d{2}$/, 'Month must be 2 digits')
+    .refine((v) => {
+      const n = Number(v);
+      return n >= 1 && n <= 12;
+    }, 'Month must be between 01 and 12'),
+  expenseYear: z
+    .string()
+    .min(1, messages.required('Year'))
+    .regex(/^\d{4}$/, 'Year must be 4 digits')
+    .refine((v) => {
+      const n = Number(v);
+      const currentYear = new Date().getFullYear();
+      return n >= 1900 && n <= currentYear;
+    }, `Year must be between 1900 and ${new Date().getFullYear()}`),
+  notes: z.string().optional(),
+});
+
+type FormData = z.infer<typeof schema>;
+
+export default function AddExpenseScreen() {
+  const theme = useTheme();
+  const router = useRouter();
+  const { selectedPgId } = useSelectedPg();
+  const createExpense = useCreateExpense();
+  const { data: masters, isLoading: mastersLoading } = useExpenseMasters();
+  const { user } = useAuth();
+  const [masterModalVisible, setMasterModalVisible] = useState(false);
+  const [selectedMasterId, setSelectedMasterId] = useState<string>('');
+
+  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    mode: 'onChange',
+    defaultValues: {
+      expenseMonth: new Date().toISOString().slice(5, 7),
+      expenseYear: String(new Date().getFullYear()),
+    },
+  });
+
+  const masterOptions = useMemo(() => {
+    if (!masters) return [];
+    return masters
+      .filter((m) => m.isActive)
+      .map((m) => ({
+        label: m.subcategoryName ? `${m.categoryName} - ${m.subcategoryName}` : m.categoryName,
+        value: m.id,
+      }));
+  }, [masters]);
+
+  const selectedMaster = useMemo(() => masterOptions.find((m) => m.value === selectedMasterId), [masterOptions, selectedMasterId]);
+
+  const handleMonthChange = (text: string, onChange: (v: string) => void) => {
+    let v = text.replace(/\D/g, '').slice(0, 2);
+    if (v.length === 2) {
+      const n = Number(v);
+      if (n > 12) v = '12';
+      if (n < 1) v = '01';
+    }
+    onChange(v);
+  };
+
+  const currentYear = new Date().getFullYear();
+
+  const handleYearChange = (text: string, onChange: (v: string) => void) => {
+    const digits = text.replace(/\D/g, '').slice(0, 4);
+    if (digits.length === 4) {
+      const year = Number(digits);
+      if (year > currentYear) {
+        onChange(String(currentYear));
+        return;
+      }
+      if (year < 1900) {
+        onChange('1900');
+        return;
+      }
+    }
+    onChange(digits);
+  };
+
+  const onSubmit = async (data: FormData) => {
+    if (!selectedPgId) return;
+    if (!selectedMasterId) {
+      Alert.alert('Category required', 'Please select an expense category');
+      return;
+    }
+    try {
+      await createExpense.mutateAsync({
+        pgPropertyId: selectedPgId,
+        expenseMasterId: selectedMasterId,
+        amount: Number(data.amount),
+        expenseMonth: data.expenseMonth,
+        expenseYear: Number(data.expenseYear),
+        notes: data.notes,
+        createdBy: user?.id || '',
+      });
+      router.back();
+    } catch (err: any) {
+      Alert.alert('Error', getApiErrorMessage(err, 'Failed to add expense'));
+    }
+  };
+
+  return (
+    <ScreenWrapper>
+      <View
+        style={{
+          backgroundColor: theme.colors.primary,
+          paddingTop: theme.spacing.xl,
+          paddingBottom: theme.spacing.xl,
+          paddingHorizontal: theme.spacing.base,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: theme.colors.white,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: theme.spacing.md,
+            }}
+          >
+            <Ionicons name="arrow-back" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <Typography variant="headline2" color={theme.colors.white}>Add Expense</Typography>
+        </View>
+      </View>
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+          <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.md }}>
+            <Card shadow="lg" padding={theme.spacing.lg}>
+              <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>Category *</Typography>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setMasterModalVisible(true)}
+              style={{
+                borderWidth: 1,
+                borderColor: !selectedMasterId ? theme.colors.danger : theme.colors.border,
+                borderRadius: theme.radius.md,
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.md,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: theme.spacing.md,
+              }}
+            >
+              <Typography variant="bodyMedium" color={selectedMaster ? theme.colors.text : theme.colors.textMuted}>
+                {selectedMaster ? selectedMaster.label : (mastersLoading ? 'Loading categories...' : 'Select category')}
+              </Typography>
+              <Ionicons name="chevron-down" size={18} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+            {!selectedMasterId && (
+              <Typography variant="caption" color={theme.colors.danger} style={{ marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                Category is required
+              </Typography>
+            )}
+
+            <Controller control={control} name="amount" render={({ field }) => (
+              <Input label="Amount *" placeholder="Enter amount" keyboardType="numeric" value={field.value} onChangeText={field.onChange} error={errors.amount?.message} leftIcon="cash-outline" />
+            )} />
+            <Controller control={control} name="expenseMonth" render={({ field }) => (
+              <Input label="Month (MM) *" placeholder="MM" maxLength={2} keyboardType="numeric" value={field.value} onChangeText={(text) => handleMonthChange(text, field.onChange)} error={errors.expenseMonth?.message} leftIcon="calendar-outline" />
+            )} />
+            <Controller control={control} name="expenseYear" render={({ field }) => (
+              <Input label="Year (YYYY) *" placeholder="YYYY" maxLength={4} keyboardType="numeric" value={field.value} onChangeText={(text) => handleYearChange(text, field.onChange)} error={errors.expenseYear?.message} leftIcon="calendar-outline" />
+            )} />
+            <Controller control={control} name="notes" render={({ field }) => (
+              <Input label="Notes" placeholder="Enter notes" value={field.value} onChangeText={field.onChange} error={errors.notes?.message} leftIcon="document-text-outline" />
+            )} />
+          </Card>
+        </View>
+      </ScrollView>
+
+      <View style={{ padding: theme.spacing.base }}>
+        <Button
+          title="Add Expense"
+          loading={createExpense.isPending}
+          leftIcon={<Ionicons name="add-circle" size={20} color={theme.colors.white} />}
+          onPress={handleSubmit(onSubmit)}
+        />
+      </View>
+      </KeyboardAvoidingView>
+
+      <Modal visible={masterModalVisible} transparent animationType="slide" onRequestClose={() => setMasterModalVisible(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }}>
+          <View style={{ backgroundColor: theme.colors.white, borderTopLeftRadius: theme.radius.xl, borderTopRightRadius: theme.radius.xl, paddingBottom: 24, maxHeight: '70%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: theme.spacing.base, borderBottomWidth: 1, borderBottomColor: theme.colors.borderLight }}>
+              <Typography variant="title1">Select Category</Typography>
+              <TouchableOpacity onPress={() => setMasterModalVisible(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            {masterOptions.length === 0 ? (
+              <View style={{ padding: theme.spacing.xl, alignItems: 'center' }}>
+                <Typography variant="body" color={theme.colors.textMuted}>No categories available</Typography>
+              </View>
+            ) : (
+              <FlatList
+                data={masterOptions}
+                keyExtractor={(item) => item.value}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setSelectedMasterId(item.value);
+                      setMasterModalVisible(false);
+                    }}
+                    style={{
+                      padding: theme.spacing.base,
+                      borderBottomWidth: 1,
+                      borderBottomColor: theme.colors.borderLight,
+                      backgroundColor: item.value === selectedMasterId ? theme.colors.primarySurface : theme.colors.white,
+                    }}
+                  >
+                    <Typography variant="bodyMedium" color={item.value === selectedMasterId ? theme.colors.primary : theme.colors.text}>{item.label}</Typography>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+    </ScreenWrapper>
+  );
+}

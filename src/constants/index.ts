@@ -1,0 +1,66 @@
+export const APP_NAME = 'PG Desk Owner';
+export const APP_VERSION = '1.0.0';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080';
+export const MOCK_DELAY_MS = 500;
+export const OTP_LENGTH = 4;
+export const PHONE_COUNTRY_CODE = '+91';
+
+export const ROUTES = {
+  AUTH: {
+    ROLE_SELECT: '/(auth)/role-select',
+    LOGIN: '/(auth)/login',
+    SIGNUP_OWNER: '/(auth)/signup-owner',
+    INSTALLATION: '/(auth)/installation-of-property',
+    REVIEW_DETAILS: '/(auth)/review-details',
+    OTP: '/(auth)/otp',
+  },
+  APP: {
+    HOME: '/(app)/(tabs)',
+    TENANTS: '/(app)/(tabs)/tenants',
+    ROOMS: '/(app)/(tabs)/rooms',
+    STAFF: '/(app)/(tabs)/staff',
+    FINANCE: '/(app)/(tabs)/finance',
+    ADD_ROOM: '/(app)/add-room',
+    STAFF_MANAGEMENT: '/(app)/staff-management',
+    PROFILE: '/(app)/profile',
+    HELP: '/(app)/help',
+    ALL_SCREENS: '/(app)/all-screens',
+  },
+  SCREENS: {
+    HOME: '/screens/home-screen',
+    TENANT: '/screens/tenant-screen',
+    ROOMS: '/screens/rooms-screen',
+    STAFF_MANAGEMENT: '/screens/staff-management',
+    PROFILE_1: '/screens/profile-screen-1',
+    PROFILE_2: '/screens/profile-screen-2',
+    ASSIGN_MANAGER: '/screens/assign-manager',
+    MANAGER_ASSIGNED: '/screens/manager-assigned-successfully',
+    MANAGER_PROFILE: '/screens/manager-profile',
+    PROPERTY_DETAILS: '/screens/property-details',
+    ADD_PROPERTY: '/screens/add-property',
+    ADD_ROOM: '/screens/add-room',
+    TENANTS_PROFILE: '/screens/tenants-profile',
+    EDIT_TENANT: '/screens/edit-tenant',
+    ACTIVE_TENANTS: '/screens/active-tenants',
+    LEFT_TENANTS_PROFILE: '/screens/left-tenants-profile',
+    LEFT_TENANTS_EMPTY: '/screens/left-tenants-profile-empty-state',
+    PENDING_DUES: '/screens/pending-dues',
+    PENDING_DUES_EMPTY: '/screens/pending-dues-empty-state',
+    COLLECTED_AMOUNT: '/screens/collected-amount',
+    EXPENSES_LIST: '/screens/expenses-list',
+    FOOD_MESS_CHARGES: '/screens/food-mess-charges',
+    UTILITY_CHARGES: '/screens/utility-charges',
+    INCOME: '/screens/income',
+    ACCESS_REQUESTS: '/screens/access-requests',
+    PAYMENTS_SALARY_HISTORY: '/screens/payments-salary-history',
+    NOTICE_BOARD: '/screens/notice-board',
+    NOTIFICATIONS: '/screens/notifications',
+    ALLOCATE_ROOM: '/screens/allocate-room',
+    FOOD_MENU: '/screens/food-menu',
+    MANAGE_PERMISSIONS: '/screens/manage-all-permissions',
+    HELP_SUPPORT: '/screens/help-support',
+    HELP_SUPPORT_CHAT_BOT: '/screens/help-support-chat-bot',
+    SIDE_BAR: '/screens/side-bar',
+    SUCCESSFULLY_ADDED: '/screens/succesfully-added',
+  },
+} as const;
