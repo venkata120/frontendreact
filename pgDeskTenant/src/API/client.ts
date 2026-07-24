@@ -2,7 +2,6 @@ import axios, { AxiosError } from 'axios';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { Storage } from '../services/storage';
-import { API_BASE_URL } from '../constants';
 import type { AuthResponse, Session } from '../types';
 
 const SESSION_KEY = '@pgdesk/session';
@@ -10,37 +9,47 @@ const REQUEST_TIMEOUT_MS = 15000;
 
 let _session: Session | null = null;
 
+/**
+ * Resolve the backend base URL for the current runtime.
+ * - If the env URL already points to an IP, leave it alone.
+ * - On Android emulator, translate localhost -> 10.0.2.2.
+ * - On iOS simulator, translate localhost -> 127.0.0.1.
+ * - On a physical device, the user should set EXPO_PUBLIC_API_URL to the
+ *   host machine's LAN IP (e.g. http://192.168.1.x:8080).
+ */
 function resolveBaseUrl(): string {
-  // The base URL must be set in the .env file via EXPO_PUBLIC_API_URL.
-  // Constants.ts is the single source of truth for the raw value.
-  const url = API_BASE_URL.trim();
-  if (!url) {
-    console.error('[API] EXPO_PUBLIC_API_URL is not set in .env');
-    return '';
+  const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+  let url = envUrl || 'http://localhost:8080';
+  const userProvidedUrl = !!envUrl;
+
+  // Accept env values that still include the /api/v1 suffix.
+  if (url.endsWith('/api/v1')) {
+    url = url.slice(0, -7);
   }
 
-  let normalizedUrl = url;
-
-  if (normalizedUrl.endsWith('/api/v1')) {
-    normalizedUrl = normalizedUrl.slice(0, -7);
+  // If the user explicitly set a URL, trust it exactly (supports LAN IP or adb reverse).
+  if (userProvidedUrl) {
+    return url;
   }
 
+  // When running in Expo Go / dev client without an env override, Metro tells us
+  // the host machine's IP. This works for physical devices and simulators.
   const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri && normalizedUrl.includes('localhost')) {
+  if (hostUri && url.includes('localhost')) {
     const hostIp = hostUri.split(':')[0];
     if (hostIp) {
-      return normalizedUrl.replace(/localhost/g, hostIp);
+      return url.replace(/localhost/g, hostIp);
     }
   }
 
-  if (normalizedUrl.includes('localhost')) {
+  if (url.includes('localhost')) {
     if (Platform.OS === 'android') {
-      return normalizedUrl.replace(/localhost/g, '10.0.2.2');
+      return url.replace(/localhost/g, '10.0.2.2');
     }
-    return normalizedUrl.replace(/localhost/g, '127.0.0.1');
+    return url.replace(/localhost/g, '127.0.0.1');
   }
 
-  return normalizedUrl;
+  return url;
 }
 
 export const API_URL = resolveBaseUrl();
