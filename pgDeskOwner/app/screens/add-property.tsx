@@ -288,7 +288,7 @@ export default function AddPropertyScreen() {
       if (isEditMode) {
         router.replace({ pathname: '/screens/property-details', params: { id: targetPropertyId } });
       } else {
-        router.push({ pathname: '/screens/succesfully-added', params: { next: 'assign-manager' } });
+        router.replace({ pathname: '/screens/assign-manager' });
       }
     } catch {
       // error surfaced by mutation
@@ -466,7 +466,7 @@ export default function AddPropertyScreen() {
                         {n} Sharing
                       </Typography>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
-                        <Typography variant="bodyMedium" color={theme.colors.textMuted}>
+                        <Typography variant="bodyMedium" color={theme.colors.textMuted} style={{ alignSelf: 'center' }}>
                           ₹
                         </Typography>
                         <TextInput
@@ -486,7 +486,7 @@ export default function AddPropertyScreen() {
                             minWidth: 60,
                           }}
                         />
-                        <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: theme.spacing.sm }}>
+                        <Typography variant="caption" color={theme.colors.textMuted} style={{ marginLeft: theme.spacing.xs, alignSelf: 'center', minWidth: 42 }}>
                           /month
                         </Typography>
                       </View>
@@ -506,10 +506,10 @@ export default function AddPropertyScreen() {
               )}
 
               {/* Advance Amount */}
-              <Typography variant="bodyMedium" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.xs }}>
+              <Typography variant="bodyMedium" style={{ marginTop: theme.spacing.md, marginBottom: theme.spacing.sm }}>
                 Advance Amount
               </Typography>
-              <Typography variant="caption" color={theme.colors.textMuted} style={{ marginBottom: theme.spacing.sm }}>
+              <Typography variant="caption" color={theme.colors.textMuted} style={{ marginBottom: theme.spacing.md }}>
                 Security deposit collected from tenants
               </Typography>
               <Controller

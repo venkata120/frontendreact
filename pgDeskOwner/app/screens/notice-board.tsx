@@ -96,13 +96,13 @@ export default function NoticeBoardScreen() {
   useFocusEffect(
     useCallback(() => {
       return () => {
-        if (modalVisible) {
-          resetForm();
-          setModalVisible(false);
-          setFilterVisible(false);
-        }
+        // Reset form state when leaving the screen so stale data is not shown
+        // on the next visit. Avoid toggling modalVisible here to prevent
+        // flicker/unmount-state updates during gesture back navigation.
+        resetForm();
+        setFilterVisible(false);
       };
-    }, [modalVisible])
+    }, [])
   );
 
   const searchPayload = useMemo(
@@ -195,6 +195,7 @@ export default function NoticeBoardScreen() {
 
       resetForm();
       setModalVisible(false);
+      Alert.alert('Notice Posted', 'Your notice has been posted successfully.');
     } catch (err: any) {
       const message = err?.response?.data?.message || err?.message || 'Failed to create notice';
       setFormError(message);

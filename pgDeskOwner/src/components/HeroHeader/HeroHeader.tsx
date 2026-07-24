@@ -31,13 +31,13 @@ export const HeroHeader: React.FC<Props> = ({
 }) => {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { selectedPg } = useSelectedPg();
+  const { selectedPg, propertyImageUri } = useSelectedPg();
 
   const { data: pgImage } = useDownloadProfileImage(selectedPg?.id, 'PG', 'profiles', {
-    enabled: !!selectedPg?.id && !imageUri,
+    enabled: !!selectedPg?.id && !propertyImageUri && !imageUri,
   });
 
-  const effectiveImageUri = imageUri || pgImage?.presignedUrl || DEFAULT_HEADER_IMAGE;
+  const effectiveImageUri = imageUri || propertyImageUri || pgImage?.presignedUrl || DEFAULT_HEADER_IMAGE;
   const [displayUri, setDisplayUri] = useState(effectiveImageUri);
 
   useEffect(() => {

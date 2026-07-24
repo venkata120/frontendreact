@@ -11,7 +11,6 @@ import { useSelectedPg } from '../../src/context/SelectedPgContext';
 import { useCreateManager, useAssignManager } from '../../src/hooks/queries';
 import { Ionicons } from '@expo/vector-icons';
 import { regex, messages, normalizeMobile, getApiErrorMessage } from '../../src/utils/validation';
-import type { UserRole } from '../../src/types';
 
 const schema = z.object({
   fullName: z
@@ -38,8 +37,14 @@ const schema = z.object({
 const MAX_NAME_LENGTH = 50;
 const MAX_ADDRESS_LENGTH = 200;
 
-const ROLE_OPTIONS: { label: string; value: UserRole }[] = [
+const ROLE_OPTIONS: { label: string; value: string }[] = [
   { label: 'Manager', value: 'manager' },
+  { label: 'Security', value: 'security' },
+  { label: 'Housekeeping', value: 'housekeeping' },
+  { label: 'Cook', value: 'cook' },
+  { label: 'Cleaner', value: 'cleaner' },
+  { label: 'Worker', value: 'worker' },
+  { label: 'Maid', value: 'maid' },
 ];
 const SHIFT_OPTIONS = ['Morning', 'Evening', 'Night', 'Full-time'];
 
@@ -75,9 +80,10 @@ export default function AssignManagerScreen() {
           email: data.email,
           password: data.password,
           mobile: normalizeMobile(data.phone),
-          role: data.role as UserRole,
+          role: data.role as any,
           active: true,
           shift: data.shift,
+          department: data.role,
         },
       });
       if (manager?.id) {

@@ -13,29 +13,30 @@ export default function PropertyDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { selectedPg } = useSelectedPg();
+  const { selectedPg, propertyImageUri } = useSelectedPg();
   const { data: propertyById, isLoading } = useProperty(id || selectedPg?.id);
   const { data: properties } = useProperties(user?.id);
   const deleteProperty = useDeleteProperty();
 
   const property = propertyById || selectedPg || (properties && properties.length > 0 ? properties[0] : undefined);
   const hasProperty = !!property;
+  const isSelectedProperty = property?.id === selectedPg?.id;
 
   const { data: imageDownload } = useDownloadProfileImage(
     property?.id,
     'PG',
     'profiles',
-    { enabled: hasProperty }
+    { enabled: hasProperty && !(isSelectedProperty && propertyImageUri) }
   );
   const [propertyImageUrl, setPropertyImageUrl] = useState(
-    imageDownload?.presignedUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'
+    (isSelectedProperty && propertyImageUri) || imageDownload?.presignedUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'
   );
 
   useEffect(() => {
     setPropertyImageUrl(
-      imageDownload?.presignedUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'
+      (isSelectedProperty && propertyImageUri) || imageDownload?.presignedUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'
     );
-  }, [imageDownload?.presignedUrl]);
+  }, [imageDownload?.presignedUrl, propertyImageUri, isSelectedProperty]);
 
   const handleImageError = () => {
     setPropertyImageUrl('https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800');

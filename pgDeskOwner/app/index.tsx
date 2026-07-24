@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
-  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
@@ -42,7 +41,7 @@ export default function SplashScreen() {
   const { isAuthenticated, loading, userRole } = useSelector((state: RootState) => state.auth);
   const { width, height } = useWindowDimensions();
   const imageSize = Math.min(width * 0.32, 140);
-  const logoSize = Math.min(width * 0.45, 160);
+  const logoSize = Math.min(width * 0.4, 130);
 
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
@@ -254,8 +253,11 @@ const styles = StyleSheet.create({
     top: '54%',
     left: 0,
     right: 0,
+    bottom: 0,
     paddingHorizontal: 24,
+    paddingBottom: 24,
     alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   question: {
     fontWeight: '600',

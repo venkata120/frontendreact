@@ -17,8 +17,7 @@ export default function SideBarScreen() {
 
   const { data: properties } = useProperties(user?.id);
   const handleMyProperty = () => {
-    const pgId = selectedPg?.id || properties?.[0]?.id;
-    if (!pgId) {
+    if (!properties || properties.length === 0) {
       Alert.alert(
         'No Property Found',
         'Please create a property using the Create Property option first.',
@@ -29,7 +28,12 @@ export default function SideBarScreen() {
       );
       return;
     }
-    router.navigate({ pathname: '/screens/add-property', params: { propertyId: pgId } } as any);
+    if (properties.length > 1) {
+      router.push('/screens/select-property' as any);
+    } else {
+      const pgId = selectedPg?.id || properties[0]?.id;
+      router.navigate({ pathname: '/screens/add-property', params: { propertyId: pgId } } as any);
+    }
   };
 
   const MENU = [

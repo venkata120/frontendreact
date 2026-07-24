@@ -63,7 +63,7 @@ export default function OTPScreen() {
     <ScreenWrapper>
       <Header onBack={() => router.back()} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView
