@@ -73,6 +73,7 @@ export const SideBarContent: React.FC<Props> = ({ onClose }) => {
     {
       title: 'Account',
       items: [
+        { label: 'My Profile', icon: 'person', route: '/screens/profile-screen-1' },
         { label: 'Manager', icon: 'person', route: '/screens/manager-profile' },
         { label: 'My Property', icon: 'business', onPress: handleMyProperty },
         { label: 'Wallet', icon: 'wallet' },
