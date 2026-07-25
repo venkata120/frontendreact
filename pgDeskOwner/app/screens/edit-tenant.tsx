@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -81,10 +81,9 @@ export default function EditTenantScreen() {
         onBack={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
       />
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
-          <View style={{ paddingHorizontal: theme.spacing.base }}>
-            <Card shadow="lg" padding={theme.spacing.lg}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: -theme.spacing.lg }}>
+        <View style={{ paddingHorizontal: theme.spacing.base }}>
+          <Card shadow="lg" padding={theme.spacing.lg}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md }}>
               <Ionicons name="person" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
               <Typography variant="title1">Personal information</Typography>
@@ -174,7 +173,6 @@ export default function EditTenantScreen() {
         </View>
         <View style={{ height: theme.spacing.xl }} />
       </ScrollView>
-    </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 }

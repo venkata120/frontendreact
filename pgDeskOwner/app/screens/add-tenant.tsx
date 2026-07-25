@@ -202,6 +202,12 @@ export default function AddTenantScreen() {
     setSelectedBedId('');
   }, [selectedRoomId]);
 
+  const roomOptions = useMemo(
+    () => roomsList.map((r) => ({ label: `Room ${r.roomNumber} (Floor ${r.floor})`, value: r.id })),
+    [roomsList]
+  );
+  const bedOptions = useMemo(() => vacantBeds.map((b) => ({ label: `Bed ${b.bedNumber}`, value: b.id })), [vacantBeds]);
+
   const capturePhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -462,86 +468,13 @@ export default function AddTenantScreen() {
                 <Typography variant="body" color={theme.colors.textMuted}>No rooms found. Please add rooms first.</Typography>
               ) : (
                 <>
-                  <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
-                    Select Room
-                  </Typography>
-                  <View style={{ marginBottom: theme.spacing.md }}>
-                    {roomsList.map((room) => {
-                      const vacantCount = room.beds?.filter((b) => b.status === 'VACANT').length ?? 0;
-                      const totalBeds = room.beds?.length ?? room.capacity;
-                      const isSelected = selectedRoomId === room.id;
-                      return (
-                        <TouchableOpacity
-                          key={room.id}
-                          activeOpacity={0.8}
-                          onPress={() => setSelectedRoomId(room.id)}
-                          style={{
-                            borderWidth: 2,
-                            borderColor: isSelected ? theme.colors.primary : theme.colors.borderLight,
-                            borderRadius: theme.radius.lg,
-                            backgroundColor: isSelected ? theme.colors.primarySurface : theme.colors.backgroundSecondary,
-                            padding: theme.spacing.md,
-                            marginBottom: theme.spacing.sm,
-                          }}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                              <Ionicons name="business-outline" size={20} color={isSelected ? theme.colors.primary : theme.colors.textMuted} style={{ marginRight: 8 }} />
-                              <View>
-                                <Typography variant="bodyMedium" style={{ fontWeight: '600' }}>
-                                  Room {room.roomNumber}
-                                </Typography>
-                                <Typography variant="caption" color={theme.colors.textMuted}>
-                                  Floor {room.floor}
-                                </Typography>
-                              </View>
-                            </View>
-                            <Typography variant="caption" color={vacantCount > 0 ? theme.colors.success : theme.colors.danger}>
-                              {vacantCount}/{totalBeds} vacant
-                            </Typography>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
+                  <Picker label="Select Room" value={selectedRoomId} placeholder="Choose a room" options={roomOptions} onSelect={setSelectedRoomId} />
                   {selectedRoomId && (
                     <>
-                      <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>
-                        Select Bed
-                      </Typography>
                       {vacantBeds.length === 0 ? (
-                        <Typography variant="body" color={theme.colors.danger} style={{ marginBottom: theme.spacing.md }}>
-                          No vacant beds in this room.
-                        </Typography>
+                        <Typography variant="body" color={theme.colors.danger}>No vacant beds in this room.</Typography>
                       ) : (
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: theme.spacing.md }}>
-                          {vacantBeds.map((bed) => {
-                            const isSelected = selectedBedId === bed.id;
-                            return (
-                              <TouchableOpacity
-                                key={bed.id}
-                                activeOpacity={0.8}
-                                onPress={() => setSelectedBedId(bed.id)}
-                                style={{
-                                  width: 56,
-                                  height: 56,
-                                  borderRadius: theme.radius.lg,
-                                  backgroundColor: isSelected ? theme.colors.primary : theme.colors.backgroundSecondary,
-                                  borderWidth: 1.5,
-                                  borderColor: isSelected ? theme.colors.primary : theme.colors.borderLight,
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                }}
-                              >
-                                <Ionicons name="bed" size={18} color={isSelected ? theme.colors.white : theme.colors.textMuted} />
-                                <Typography variant="caption" color={isSelected ? theme.colors.white : theme.colors.text}>
-                                  {bed.bedNumber}
-                                </Typography>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
+                        <Picker label="Select Bed" value={selectedBedId} placeholder="Choose a vacant bed" options={bedOptions} onSelect={setSelectedBedId} />
                       )}
                     </>
                   )}
@@ -578,7 +511,6 @@ export default function AddTenantScreen() {
         visible={successOpen}
         icon="checkmark-circle"
         title="Tenant Added Successfully"
-        message="The tenant has been allocated to the selected bed."
         primaryButton={{
           title: 'Done',
           onPress: () => {

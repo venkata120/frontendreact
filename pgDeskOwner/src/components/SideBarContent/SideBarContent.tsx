@@ -54,28 +54,11 @@ export const SideBarContent: React.FC<Props> = ({ onClose }) => {
 
   const { data: properties } = useProperties(user?.id);
   const handleMyProperty = () => {
-    if (!properties || properties.length === 0) {
-      onClose?.();
-      setTimeout(() => {
-        Alert.alert(
-          'No Property Found',
-          'Please create a property using the Create Property option first.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Create Property', onPress: () => router.push('/screens/add-property' as any) },
-          ]
-        );
-      }, 300);
-      return;
-    }
+    const pgId = selectedPg?.id || properties?.[0]?.id;
+    if (!pgId) return;
     onClose?.();
     setTimeout(() => {
-      if (properties.length > 1) {
-        router.push('/screens/select-property' as any);
-      } else {
-        const pgId = selectedPg?.id || properties[0]?.id;
-        router.navigate({ pathname: '/screens/add-property', params: { propertyId: pgId } } as any);
-      }
+      router.navigate({ pathname: '/screens/add-property', params: { propertyId: pgId } } as any);
     }, 300);
   };
 
@@ -90,8 +73,7 @@ export const SideBarContent: React.FC<Props> = ({ onClose }) => {
     {
       title: 'Account',
       items: [
-        { label: 'My Profile', icon: 'person', route: '/screens/profile-screen-1' },
-        { label: 'Manager', icon: 'people', route: '/screens/manager-profile' },
+        { label: 'Manager', icon: 'person', route: '/screens/manager-profile' },
         { label: 'My Property', icon: 'business', onPress: handleMyProperty },
         { label: 'Wallet', icon: 'wallet' },
         { label: 'Notifications', icon: 'notifications', route: '/screens/notifications' },

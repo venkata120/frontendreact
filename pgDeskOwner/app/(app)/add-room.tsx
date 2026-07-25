@@ -99,7 +99,6 @@ export default function AddRoomScreen() {
         roomNumber: roomNumber.trim(),
         floor: Number(floor),
         capacity,
-        baseRent: baseRent.trim() ? Number(baseRent.trim()) : undefined,
       });
 
       await Promise.all(

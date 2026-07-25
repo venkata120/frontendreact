@@ -9,8 +9,6 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -556,28 +554,27 @@ export default function FoodMenuScreen() {
         visible={menuModalVisible}
         onRequestClose={closeMenuModal}
       >
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.black }}>
-            <View
-              style={{
-                backgroundColor: theme.colors.background,
-                borderTopLeftRadius: theme.radius.xl,
-                borderTopRightRadius: theme.radius.xl,
-                padding: theme.spacing.lg,
-                maxHeight: '92%',
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
-                <Typography variant="title3" color={theme.colors.text} style={{ fontWeight: '600' }}>
-                  {editingMenu ? 'Edit Menu' : 'Add Menu'}
-                </Typography>
-                <TouchableOpacity onPress={closeMenuModal}>
-                  <Ionicons name="close" size={24} color={theme.colors.textMuted} />
-                </TouchableOpacity>
-              </View>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.black }}>
+          <View
+            style={{
+              backgroundColor: theme.colors.background,
+              borderTopLeftRadius: theme.radius.xl,
+              borderTopRightRadius: theme.radius.xl,
+              padding: theme.spacing.lg,
+              maxHeight: '92%',
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
+              <Typography variant="title3" color={theme.colors.text} style={{ fontWeight: '600' }}>
+                {editingMenu ? 'Edit Menu' : 'Add Menu'}
+              </Typography>
+              <TouchableOpacity onPress={closeMenuModal}>
+                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
 
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={{ paddingBottom: theme.spacing.xl }}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={{ paddingBottom: theme.spacing.xl }}>
                 <Input
                   label="Menu Name"
                   placeholder="e.g. South Indian Breakfast"
@@ -746,10 +743,9 @@ export default function FoodMenuScreen() {
             </ScrollView>
           </View>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      </Modal>
 
-    <DatePicker
+      <DatePicker
         visible={datePickerVisible}
         value={form.menuDate}
         onChange={(date) => updateField('menuDate', dayjs(date).format('YYYY-MM-DD'))}

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { View, ScrollView, TouchableOpacity, Modal, FlatList, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Modal, FlatList, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -147,11 +147,10 @@ export default function AddExpenseScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-          <View style={{ paddingHorizontal: theme.spacing.base, paddingTop: theme.spacing.md }}>
-            <Card shadow="lg" padding={theme.spacing.lg}>
-              <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>Category *</Typography>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: theme.spacing.md }}>
+        <View style={{ paddingHorizontal: theme.spacing.base }}>
+          <Card shadow="lg" padding={theme.spacing.lg}>
+            <Typography variant="bodyMedium" style={{ marginBottom: theme.spacing.sm }}>Category *</Typography>
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => setMasterModalVisible(true)}
@@ -202,7 +201,6 @@ export default function AddExpenseScreen() {
           onPress={handleSubmit(onSubmit)}
         />
       </View>
-      </KeyboardAvoidingView>
 
       <Modal visible={masterModalVisible} transparent animationType="slide" onRequestClose={() => setMasterModalVisible(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: theme.colors.overlay }}>

@@ -355,7 +355,7 @@ export default function HomeScreen() {
         style={{
           position: 'absolute',
           right: theme.spacing.base,
-          bottom: insets.bottom + 96,
+          bottom: insets.bottom + 80,
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: theme.colors.primary,

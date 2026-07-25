@@ -60,16 +60,25 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "networkSecurityConfig": "./network-security-config.xml"
           }
         }
       ],
+      "./withNetworkSecurityConfig.js",
       "@react-native-community/datetimepicker",
       "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9f7f9ea7-8811-4860-9ffa-c34158647cb8"
+      }
     }
   }
 }
+

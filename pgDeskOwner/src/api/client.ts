@@ -20,7 +20,7 @@ let _session: Session | null = null;
  */
 function resolveBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-  let url = envUrl || 'http://localhost:8080';
+  let url = envUrl || 'https://storm-blinker-xbox.ngrok-free.dev';
   const userProvidedUrl = !!envUrl;
 
   // Accept env values that still include the /api/v1 suffix.
@@ -144,6 +144,40 @@ apiClient.interceptors.response.use(
     return Promise.reject(err);
   }
 );
+
+if (__DEV__) { 
+  // Log outgoing requests and responses (success or failure) in development. 
+  apiClient.interceptors.request.use( 
+    (config) => { 
+      console.log( 
+        `[API Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}\n` + 
+            `Headers: ${JSON.stringify(config.headers)}\n` + 
+            `Body: ${config.data ? JSON.stringify(config.data) : '(none)'}` 
+      ); 
+      return config; 
+    }, 
+    (error) => Promise.reject(error) 
+  ); 
+ 
+  apiClient.interceptors.response.use( 
+    (response) => { 
+      console.log( 
+        `[API Response] ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}\n` + 
+            `Data: ${JSON.stringify(response.data)}` 
+      ); 
+      return response; 
+    }, 
+    (error) => { 
+      const axiosError = error as AxiosError; 
+      console.error( 
+        `[API Response Error] ${axiosError.response?.status ?? 'NO_STATUS'} ${axiosError.config?.method?.toUpperCase() ?? 'UNKNOWN'} ${axiosError.config?.url ?? 'unknown'}\n` + 
+            `Message: ${axiosError.message}\n` + 
+            `Data: ${JSON.stringify(axiosError.response?.data ?? axiosError.message)}` 
+      ); 
+      return Promise.reject(error); 
+    } 
+  ); 
+}
 
 const refreshClient = axios.create({
   baseURL: API_URL,

@@ -217,7 +217,6 @@ export interface Room {
   roomNumber: string;
   floor: number;
   capacity: number;
-  baseRent?: number;
   beds?: Bed[];
   occupiedBeds?: number;
   vacantBeds?: number;

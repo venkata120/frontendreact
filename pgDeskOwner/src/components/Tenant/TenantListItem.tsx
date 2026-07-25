@@ -38,7 +38,7 @@ export const TenantListItem: React.FC<Props> = ({ tenant, variant = 'default', o
     >
       <Avatar uri={tenant.avatar} name={tenant.fullName} size={56} style={{ opacity: isLeft ? 0.6 : 1, borderColor: theme.colors.textMuted }} />
       <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
-        <Typography variant="title3" color={nameColor} numberOfLines={1} ellipsizeMode="tail">
+        <Typography variant="title3" color={nameColor}>
           {tenant.fullName}
         </Typography>
         <View
@@ -52,11 +52,11 @@ export const TenantListItem: React.FC<Props> = ({ tenant, variant = 'default', o
             marginBottom: 2,
           }}
         >
-          <Typography variant="caption" color={theme.colors.accentPurple} numberOfLines={1} ellipsizeMode="tail">
+          <Typography variant="caption" color={theme.colors.accentPurple}>
             Room {tenant.roomNumber || tenant.bedNumber || '-'}
           </Typography>
         </View>
-        <Typography variant="bodyMedium" color={rentColor} numberOfLines={1} ellipsizeMode="tail">
+        <Typography variant="bodyMedium" color={rentColor}>
           ₹{tenant.rentPerMonth.toLocaleString()}/month
         </Typography>
       </View>

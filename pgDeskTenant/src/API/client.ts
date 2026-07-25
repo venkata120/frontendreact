@@ -19,7 +19,7 @@ let _session: Session | null = null;
  */
 function resolveBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-  let url = envUrl || 'http://localhost:8080';
+  let url = envUrl || 'https://storm-blinker-xbox.ngrok-free.dev';
   const userProvidedUrl = !!envUrl;
 
   // Accept env values that still include the /api/v1 suffix.
